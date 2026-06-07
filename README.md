@@ -132,7 +132,7 @@ A polished Flutter app that bridges the gap between **Parents**, **Tutors**, and
 
 ---
 
-### Teacher 1
+### Tutor 1
 
 <table>
   <tr>
@@ -164,7 +164,7 @@ A polished Flutter app that bridges the gap between **Parents**, **Tutors**, and
 
 ---
 
-### Teacher 2
+### Tutor 2
 
 <table>
   <tr>
@@ -181,7 +181,7 @@ A polished Flutter app that bridges the gap between **Parents**, **Tutors**, and
 
 ---
 
-### Child 1
+### Child 1 (has two tutors)
 
 <table>
   <tr>
@@ -208,7 +208,7 @@ A polished Flutter app that bridges the gap between **Parents**, **Tutors**, and
 
 ---
 
-### Child 2
+### Child 2 (has one tutor)
 
 <table>
   <tr>
