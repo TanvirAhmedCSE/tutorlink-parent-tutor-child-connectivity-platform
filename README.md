@@ -78,6 +78,8 @@ A polished Flutter app that bridges the gap between **Parents**, **Tutors**, and
 
 ## Screenshots
 
+### Sign Up & Email Verification
+
 <table>
   <tr>
     <td align="center"><img src="app screenshots/1 sign up and email verification/1.jpg" width="220"/></td>
@@ -86,54 +88,85 @@ A polished Flutter app that bridges the gap between **Parents**, **Tutors**, and
   </tr>
   <tr>
     <td align="center"><img src="app screenshots/1 sign up and email verification/4.jpg" width="220"/></td>
+    <td></td>
+    <td></td>
+  </tr>
+</table>
+
+---
+
+### Parent
+
+<table>
+  <tr>
     <td align="center"><img src="app screenshots/2 parent/5.jpg" width="220"/></td>
     <td align="center"><img src="app screenshots/2 parent/6.jpg" width="220"/></td>
+    <td align="center"><img src="app screenshots/2 parent/7.jpg" width="220"/></td>
   </tr>
   <tr>
-    <td align="center"><img src="app screenshots/2 parent/7.jpg" width="220"/></td>
     <td align="center"><img src="app screenshots/2 parent/8.jpg" width="220"/></td>
     <td align="center"><img src="app screenshots/2 parent/9.jpg" width="220"/></td>
+    <td align="center"><img src="app screenshots/2 parent/10.jpg" width="220"/></td>
   </tr>
   <tr>
-    <td align="center"><img src="app screenshots/2 parent/10.jpg" width="220"/></td>
     <td align="center"><img src="app screenshots/2 parent/11.jpg" width="220"/></td>
     <td align="center"><img src="app screenshots/2 parent/12.jpg" width="220"/></td>
+    <td align="center"><img src="app screenshots/2 parent/13.jpg" width="220"/></td>
   </tr>
   <tr>
-    <td align="center"><img src="app screenshots/2 parent/13.jpg" width="220"/></td>
     <td align="center"><img src="app screenshots/2 parent/14.jpg" width="220"/></td>
     <td align="center"><img src="app screenshots/2 parent/15.jpg" width="220"/></td>
+    <td align="center"><img src="app screenshots/2 parent/16.jpg" width="220"/></td>
   </tr>
   <tr>
-    <td align="center"><img src="app screenshots/2 parent/16.jpg" width="220"/></td>
     <td align="center"><img src="app screenshots/2 parent/17.jpg" width="220"/></td>
     <td align="center"><img src="app screenshots/2 parent/18.jpg" width="220"/></td>
-  </tr>
-  <tr>
     <td align="center"><img src="app screenshots/2 parent/19.jpg" width="220"/></td>
-    <td align="center"><img src="app screenshots/2 parent/20.jpg" width="220"/></td>
-    <td align="center"><img src="app screenshots/3 teacher1/21.jpg" width="220"/></td>
   </tr>
   <tr>
+    <td align="center"><img src="app screenshots/2 parent/20.jpg" width="220"/></td>
+    <td></td>
+    <td></td>
+  </tr>
+</table>
+
+---
+
+### Teacher 1
+
+<table>
+  <tr>
+    <td align="center"><img src="app screenshots/3 teacher1/21.jpg" width="220"/></td>
     <td align="center"><img src="app screenshots/3 teacher1/22.jpg" width="220"/></td>
     <td align="center"><img src="app screenshots/3 teacher1/23.jpg" width="220"/></td>
-    <td align="center"><img src="app screenshots/3 teacher1/24.jpg" width="220"/></td>
   </tr>
   <tr>
+    <td align="center"><img src="app screenshots/3 teacher1/24.jpg" width="220"/></td>
     <td align="center"><img src="app screenshots/3 teacher1/25.jpg" width="220"/></td>
     <td align="center"><img src="app screenshots/3 teacher1/26.jpg" width="220"/></td>
-    <td align="center"><img src="app screenshots/3 teacher1/27.jpg" width="220"/></td>
   </tr>
   <tr>
+    <td align="center"><img src="app screenshots/3 teacher1/27.jpg" width="220"/></td>
     <td align="center"><img src="app screenshots/3 teacher1/28.jpg" width="220"/></td>
     <td align="center"><img src="app screenshots/3 teacher1/29.jpg" width="220"/></td>
-    <td align="center"><img src="app screenshots/3 teacher1/30.jpg" width="220"/></td>
   </tr>
   <tr>
+    <td align="center"><img src="app screenshots/3 teacher1/30.jpg" width="220"/></td>
     <td align="center"><img src="app screenshots/3 teacher1/31.jpg" width="220"/></td>
     <td align="center"><img src="app screenshots/3 teacher1/32.jpg" width="220"/></td>
-    <td align="center"><img src="app screenshots/3 teacher1/33.jpg" width="220"/></td>
   </tr>
+  <tr>
+    <td align="center"><img src="app screenshots/3 teacher1/33.jpg" width="220"/></td>
+    <td></td>
+    <td></td>
+  </tr>
+</table>
+
+---
+
+### Teacher 2
+
+<table>
   <tr>
     <td align="center"><img src="app screenshots/4 teacher2/34.jpg" width="220"/></td>
     <td align="center"><img src="app screenshots/4 teacher2/35.jpg" width="220"/></td>
@@ -141,33 +174,57 @@ A polished Flutter app that bridges the gap between **Parents**, **Tutors**, and
   </tr>
   <tr>
     <td align="center"><img src="app screenshots/4 teacher2/37.jpg" width="220"/></td>
+    <td></td>
+    <td></td>
+  </tr>
+</table>
+
+---
+
+### Child 1
+
+<table>
+  <tr>
     <td align="center"><img src="app screenshots/5 student1/38.jpg" width="220"/></td>
     <td align="center"><img src="app screenshots/5 student1/39.jpg" width="220"/></td>
+    <td align="center"><img src="app screenshots/5 student1/40.jpg" width="220"/></td>
   </tr>
   <tr>
-    <td align="center"><img src="app screenshots/5 student1/40.jpg" width="220"/></td>
     <td align="center"><img src="app screenshots/5 student1/41.jpg" width="220"/></td>
     <td align="center"><img src="app screenshots/5 student1/42.jpg" width="220"/></td>
+    <td align="center"><img src="app screenshots/5 student1/43.jpg" width="220"/></td>
   </tr>
   <tr>
-    <td align="center"><img src="app screenshots/5 student1/43.jpg" width="220"/></td>
     <td align="center"><img src="app screenshots/5 student1/44.jpg" width="220"/></td>
     <td align="center"><img src="app screenshots/5 student1/45.jpg" width="220"/></td>
-  </tr>
-  <tr>
     <td align="center"><img src="app screenshots/5 student1/46.jpg" width="220"/></td>
-    <td align="center"><img src="app screenshots/5 student1/47.jpg" width="220"/></td>
-    <td align="center"><img src="app screenshots/6 student2/48.jpg" width="220"/></td>
   </tr>
   <tr>
+    <td align="center"><img src="app screenshots/5 student1/47.jpg" width="220"/></td>
+    <td></td>
+    <td></td>
+  </tr>
+</table>
+
+---
+
+### Child 2
+
+<table>
+  <tr>
+    <td align="center"><img src="app screenshots/6 student2/48.jpg" width="220"/></td>
     <td align="center"><img src="app screenshots/6 student2/49.jpg" width="220"/></td>
     <td align="center"><img src="app screenshots/6 student2/50.jpg" width="220"/></td>
-    <td align="center"><img src="app screenshots/6 student2/51.jpg" width="220"/></td>
   </tr>
   <tr>
+    <td align="center"><img src="app screenshots/6 student2/51.jpg" width="220"/></td>
     <td align="center"><img src="app screenshots/6 student2/52.jpg" width="220"/></td>
     <td align="center"><img src="app screenshots/6 student2/53.jpg" width="220"/></td>
+  </tr>
+  <tr>
     <td align="center"><img src="app screenshots/6 student2/54.jpg" width="220"/></td>
+    <td></td>
+    <td></td>
   </tr>
 </table>
 
