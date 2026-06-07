@@ -32,7 +32,7 @@ A polished Flutter app that bridges the gap between **Parents**, **Tutors**, and
 - **Tutor** — dashboard with student count, pending review count, student list with per-student progress rings
 - **Student** — overall progress card with gradient banner, subject breakdown, recent feedback from Tutors
 
-**Parent–Tutor–Student Linking**
+**Parent–Tutor–Child Linking**
 - Parents initiate links by entering Tutor email, subject, and one or more student emails
 - Full validation: checks registration, correct role, correct subject, no duplicate links, no subject conflicts
 - Multi-student link creation in a single form submission
