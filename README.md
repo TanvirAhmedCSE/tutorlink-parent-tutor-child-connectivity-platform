@@ -109,7 +109,7 @@ A polished Flutter app that bridges the gap between **Parents**, **Tutors**, and
   </tr>
   <tr>
     <td align="center"><img src="app screenshots/log in sign up/4.jpg" width="220"/></td>
-    <td align="center"><img src="app screenshots/log in sign up/5.jpg" width="220"/></td>
+    <td align="center"><img src="app screenshots/log in sign up/5a.jpg" width="220"/></td>
     <td align="center"><img src="app screenshots/log in sign up/6.jpg" width="220"/></td>
   </tr>
 </table>
