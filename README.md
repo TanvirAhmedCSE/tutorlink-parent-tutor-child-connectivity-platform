@@ -140,7 +140,7 @@ A polished Flutter app that bridges the gap between **Parents**, **Tutors**, and
   </tr>
   <tr>
     <td align="center"><img src="app screenshots/parent/19.jpg" width="220"/></td>
-    <td align="center"><img src="app screenshots/parent/20.jpg" width="220"/><br/><b>Add New Student to an existed Group</b></td>
+    <td align="center"><img src="app screenshots/parent/20.jpg" width="220"/><br/><b>Add New Student to an Existed Group</b></td>
     <td align="center"><img src="app screenshots/parent/21.jpg" width="220"/></td>
   </tr>
 </table>
