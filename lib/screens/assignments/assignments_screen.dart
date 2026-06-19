@@ -6,6 +6,8 @@ import '../../utils/theme.dart';
 import '../../widgets/widgets.dart';
 import 'assignment_detail_screen.dart';
 import '../../utils/constants.dart';
+import '../../widgets/attachment_widgets.dart';
+import '../../services/cloudinary_service.dart';
 
 class AssignmentsScreen extends StatelessWidget {
   final AppUser user;
@@ -224,11 +226,34 @@ class _ChildAssignmentsState extends State<_ChildAssignments>
 }
 
 //  Parent Assignments
-class _ParentAssignments extends StatelessWidget {
+class _ParentAssignments extends StatefulWidget {
   final AppUser user;
-  final _fs = FirestoreService();
+  const _ParentAssignments({required this.user});
 
-  _ParentAssignments({required this.user});
+  @override
+  State<_ParentAssignments> createState() => _ParentAssignmentsState();
+}
+
+class _ParentAssignmentsState extends State<_ParentAssignments> {
+  final _fs = FirestoreService();
+  String _selectedChildId = 'all';
+  String _selectedStatus = 'all';
+
+  List<Assignment> _applyFilters(List<Assignment> assignments) {
+    return assignments.where((a) {
+      final childMatch =
+          _selectedChildId == 'all' || a.childId == _selectedChildId;
+      final statusMatch =
+          _selectedStatus == 'all' ||
+          (_selectedStatus == 'pending' &&
+              a.status == AssignmentStatus.pending) ||
+          (_selectedStatus == 'submitted' &&
+              a.status == AssignmentStatus.submitted) ||
+          (_selectedStatus == 'reviewed' &&
+              a.status == AssignmentStatus.reviewed);
+      return childMatch && statusMatch;
+    }).toList();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -239,7 +264,7 @@ class _ParentAssignments extends StatelessWidget {
         automaticallyImplyLeading: false,
       ),
       body: StreamBuilder<List<Child>>(
-        stream: _fs.parentChildrenStream(user.uid),
+        stream: _fs.parentChildrenStream(widget.user.uid),
         builder: (context, childSnap) {
           final children = childSnap.data ?? [];
           if (children.isEmpty) {
@@ -250,29 +275,134 @@ class _ParentAssignments extends StatelessWidget {
             );
           }
           final childIds = children.map((c) => c.id).toList();
+
           return StreamBuilder<List<Assignment>>(
             stream: _fs.childrenAssignmentsStream(childIds),
             builder: (context, snap) {
               if (snap.connectionState == ConnectionState.waiting) {
                 return const AppLoading();
               }
-              final assignments = snap.data ?? [];
-              if (assignments.isEmpty) {
-                return const EmptyState(
-                  icon: Icons.assignment_outlined,
-                  title: 'No assignments yet',
-                  subtitle: 'Your children\'s assignments will appear here.',
-                );
-              }
-              return _AssignmentList(
-                assignments: assignments,
-                currentUser: user,
-                emptyTitle: 'No assignments',
-                emptySubtitle: '',
+              final allAssignments = snap.data ?? [];
+              final filtered = _applyFilters(allAssignments);
+
+              return Column(
+                children: [
+                  _buildChildChips(children),
+                  _buildStatusChips(),
+                  Expanded(
+                    child: filtered.isEmpty
+                        ? const EmptyState(
+                            icon: Icons.assignment_outlined,
+                            title: 'No assignments',
+                            subtitle:
+                                'No assignments match the selected filters.',
+                          )
+                        : _AssignmentList(
+                            assignments: filtered,
+                            currentUser: widget.user,
+                            emptyTitle: 'No assignments',
+                            emptySubtitle: '',
+                          ),
+                  ),
+                ],
               );
             },
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildChildChips(List<Child> children) {
+    return SizedBox(
+      height: 44,
+      child: ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        scrollDirection: Axis.horizontal,
+        children: [
+          _FilterChip(
+            label: 'All',
+            selected: _selectedChildId == 'all',
+            onTap: () => setState(() => _selectedChildId = 'all'),
+          ),
+          ...children.map(
+            (c) => _FilterChip(
+              label: c.name,
+              selected: _selectedChildId == c.id,
+              onTap: () => setState(() => _selectedChildId = c.id),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusChips() {
+    const statuses = [
+      ('all', 'All', null),
+      ('pending', 'Pending', AppColors.warning),
+      ('submitted', 'Submitted', AppColors.info),
+      ('reviewed', 'Reviewed', AppColors.success),
+    ];
+
+    return SizedBox(
+      height: 44,
+      child: ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        scrollDirection: Axis.horizontal,
+        children: statuses
+            .map(
+              (s) => _FilterChip(
+                label: s.$2,
+                selected: _selectedStatus == s.$1,
+                onTap: () => setState(() => _selectedStatus = s.$1),
+                color: s.$3,
+              ),
+            )
+            .toList(),
+      ),
+    );
+  }
+}
+
+class _FilterChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  final Color? color;
+
+  const _FilterChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+    this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = color ?? AppColors.primary;
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        margin: const EdgeInsets.only(right: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected ? c.withValues(alpha: 0.12) : AppColors.card,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected ? c : AppColors.divider,
+            width: selected ? 1.5 : 1,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+            color: selected ? c : AppColors.textSecondary,
+          ),
+        ),
       ),
     );
   }
@@ -362,8 +492,12 @@ class _AssignmentCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: _isOverdue
-                ? AppColors.error.withValues(alpha: 0.3)
-                : AppColors.divider,
+                ? AppColors.error
+                : assignment.status == AssignmentStatus.submitted
+                ? AppColors.info
+                : assignment.status == AssignmentStatus.reviewed
+                ? AppColors.success
+                : Colors.orange.withValues(alpha: 0.7),
           ),
         ),
         child: Column(
@@ -445,6 +579,8 @@ class _CreateAssignmentSheetState extends State<_CreateAssignmentSheet> {
   List<TeacherChildLink> _selectedLinks = [];
   List<TeacherChildLink> _links = [];
   bool _loading = false;
+
+  final List<PendingAttachment> _attachments = [];
 
   @override
   void initState() {
@@ -669,6 +805,20 @@ class _CreateAssignmentSheetState extends State<_CreateAssignmentSheet> {
     }
     setState(() => _loading = true);
     try {
+      // Upload attachments first
+      List<AssignmentAttachment> uploaded = [];
+      if (_attachments.isNotEmpty) {
+        uploaded = await uploadPendingAttachments<AssignmentAttachment>(
+          pending: _attachments,
+          folder: CloudinaryFolder.assignmentImages,
+          onProgress: () {
+            if (mounted) setState(() {});
+          },
+          builder: (url, filename, type) =>
+              AssignmentAttachment(url: url, filename: filename, type: type),
+        );
+      }
+
       for (final link in _selectedLinks) {
         await _fs.createAssignment(
           teacherId: widget.teacher.uid,
@@ -679,6 +829,7 @@ class _CreateAssignmentSheetState extends State<_CreateAssignmentSheet> {
           title: _titleCtrl.text.trim(),
           instructions: _instructionsCtrl.text.trim(),
           dueDate: _dueDate,
+          attachments: uploaded,
         );
       }
       if (mounted) {
@@ -836,6 +987,13 @@ class _CreateAssignmentSheetState extends State<_CreateAssignmentSheet> {
                 ),
                 validator: (v) =>
                     v == null || v.isEmpty ? 'Enter instructions' : null,
+              ),
+              const SizedBox(height: 14),
+              // attachment picker
+              AttachmentPickerSection(
+                attachments: _attachments,
+                onAdded: (a) => setState(() => _attachments.add(a)),
+                onRemoved: (i) => setState(() => _attachments.removeAt(i)),
               ),
               const SizedBox(height: 14),
               GestureDetector(

@@ -4,6 +4,7 @@ import '../../models/models.dart';
 import '../../services/firestore_service.dart';
 import '../../utils/theme.dart';
 import '../../widgets/widgets.dart';
+import '../auth/setup_profile_picture_screen.dart';
 import 'chat_room_screen.dart';
 
 class ChatsScreen extends StatelessWidget {
@@ -23,9 +24,6 @@ class ChatsScreen extends StatelessWidget {
       body: StreamBuilder<List<GroupChat>>(
         stream: _fs.userChatsStream(user.uid, user.role.name),
         builder: (context, snap) {
-          print(
-            'CHAT SNAP: ${snap.connectionState}, data: ${snap.data?.length}, error: ${snap.error}',
-          );
           if (snap.connectionState == ConnectionState.waiting) {
             return const AppLoading();
           }
@@ -65,24 +63,33 @@ class _ChatTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-      leading: Container(
-        width: 48,
-        height: 48,
-        decoration: BoxDecoration(
-          color: AppColors.primaryFaint,
-          shape: BoxShape.circle,
-        ),
-        child: Center(
-          child: Text(
-            chat.subject.isNotEmpty ? chat.subject[0].toUpperCase() : 'G',
-            style: const TextStyle(
-              color: AppColors.primary,
-              fontWeight: FontWeight.w800,
-              fontSize: 18,
+      leading: chat.teacherAvatarUrl.isNotEmpty
+          ? RectAvatar(
+              imagePath: chat.teacherAvatarUrl,
+              name: chat.name,
+              width: 40,
+              height: 52,
+              borderRadius: 10,
+            )
+          // fallback: subject initial in a rectangle
+          : Container(
+              width: 40,
+              height: 52,
+              decoration: BoxDecoration(
+                color: AppColors.primaryFaint,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Center(
+                child: Text(
+                  chat.subject.isNotEmpty ? chat.subject[0].toUpperCase() : 'G',
+                  style: const TextStyle(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 18,
+                  ),
+                ),
+              ),
             ),
-          ),
-        ),
-      ),
       title: Text(
         chat.name,
         style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),

@@ -41,13 +41,16 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
 
   Future<void> _resend() async {
     setState(() => _resending = true);
-    await _auth.resendVerificationEmail();
+    final error = await _auth.resendVerificationEmail();
     await Future.delayed(const Duration(seconds: 1));
     if (mounted) {
       setState(() => _resending = false);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Verification email sent!')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error ?? 'Verification email sent!'),
+          backgroundColor: error != null ? Colors.red : null,
+        ),
+      );
     }
   }
 
@@ -66,7 +69,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                 Container(
                   width: 100,
                   height: 100,
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     color: AppColors.primaryFaint,
                     shape: BoxShape.circle,
                   ),
@@ -99,9 +102,9 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                     color: AppColors.primaryFaint,
                     borderRadius: BorderRadius.circular(14),
                   ),
-                  child: Row(
+                  child: const Row(
                     children: [
-                      const SizedBox(
+                      SizedBox(
                         width: 20,
                         height: 20,
                         child: CircularProgressIndicator(
@@ -109,8 +112,8 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                           color: AppColors.primary,
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      const Expanded(
+                      SizedBox(width: 12),
+                      Expanded(
                         child: Text(
                           'Waiting for verification...',
                           style: TextStyle(

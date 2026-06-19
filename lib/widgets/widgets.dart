@@ -79,7 +79,7 @@ class ProgressRing extends StatelessWidget {
             )
           : const SizedBox.shrink(),
       progressColor: color ?? _color,
-      backgroundColor: AppColors.divider,
+      backgroundColor: Colors.grey.withValues(alpha: 0.3),
       circularStrokeCap: CircularStrokeCap.round,
       animation: true,
       animationDuration: 600,
@@ -107,21 +107,29 @@ class StatCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
+        color: color,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: color, size: 22),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(19),
+            ),
+
+            child: Icon(icon, color: color, size: 22),
+          ),
           const SizedBox(height: 10),
           Text(
             value,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w800,
-              color: color,
+              color: Colors.white,
             ),
           ),
           const SizedBox(height: 2),
@@ -129,7 +137,7 @@ class StatCard extends StatelessWidget {
             label,
             style: const TextStyle(
               fontSize: 12,
-              color: AppColors.textSecondary,
+              color: Colors.white,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -252,15 +260,15 @@ class RoleBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
+        color: color,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
         label,
-        style: TextStyle(
+        style: const TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w700,
-          color: color,
+          color: Colors.white,
         ),
       ),
     );
@@ -279,16 +287,16 @@ class StatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        color: color,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Text(
         label,
-        style: TextStyle(
+        style: const TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w700,
-          color: color,
+          color: Colors.white,
         ),
       ),
     );

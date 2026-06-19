@@ -8,6 +8,8 @@ class AppUser {
   final String email;
   final UserRole role;
   final String? avatarUrl;
+  final String? secondAvatarUrl; // student only
+  final int? avatarColor; // student only
   final DateTime createdAt;
   final String? parentType;
 
@@ -17,6 +19,8 @@ class AppUser {
     required this.email,
     required this.role,
     this.avatarUrl,
+    this.secondAvatarUrl,
+    this.avatarColor,
     required this.createdAt,
     this.parentType,
   });
@@ -28,6 +32,8 @@ class AppUser {
       email: map['email'] ?? '',
       role: UserRoleExt.fromString(map['role'] ?? 'child'),
       avatarUrl: map['avatarUrl'],
+      secondAvatarUrl: map['secondAvatarUrl'],
+      avatarColor: map['avatarColor'],
       createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       parentType: map['parentType'],
     );
@@ -38,6 +44,8 @@ class AppUser {
     'email': email,
     'role': role.value,
     'avatarUrl': avatarUrl,
+    'secondAvatarUrl': secondAvatarUrl,
+    'avatarColor': avatarColor,
     'createdAt': Timestamp.fromDate(createdAt),
     'parentType': parentType,
   };
@@ -48,34 +56,42 @@ class Child {
   final String id;
   final String name;
   final String? avatarUrl;
+  final int? avatarColor; // student color from firestore
   final List<String> parentIds;
   final List<String> teacherIds;
   final DateTime createdAt;
+  final String? secondAvatarUrl;
 
   Child({
     required this.id,
     required this.name,
     this.avatarUrl,
+    this.avatarColor,
     required this.parentIds,
     required this.teacherIds,
     required this.createdAt,
+    this.secondAvatarUrl,
   });
 
   factory Child.fromMap(Map<String, dynamic> map, String id) => Child(
     id: id,
     name: map['name'] ?? '',
     avatarUrl: map['avatarUrl'],
+    avatarColor: map['avatarColor'],
     parentIds: List<String>.from(map['parentIds'] ?? []),
     teacherIds: List<String>.from(map['teacherIds'] ?? []),
     createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+    secondAvatarUrl: map['secondAvatarUrl'],
   );
 
   Map<String, dynamic> toMap() => {
     'name': name,
     'avatarUrl': avatarUrl,
+    'avatarColor': avatarColor,
     'parentIds': parentIds,
     'teacherIds': teacherIds,
     'createdAt': Timestamp.fromDate(createdAt),
+    'secondAvatarUrl': secondAvatarUrl,
   };
 }
 
@@ -84,19 +100,23 @@ class TeacherChildLink {
   final String id;
   final String teacherId;
   final String teacherName;
+  final String teacherAvatarUrl; // teacher asset path
   final String childId;
   final String childName;
   final String subject;
   final DateTime createdAt;
+  final String childAvatarUrl;
 
   TeacherChildLink({
     required this.id,
     required this.teacherId,
     required this.teacherName,
+    this.teacherAvatarUrl = '',
     required this.childId,
     required this.childName,
     required this.subject,
     required this.createdAt,
+    required this.childAvatarUrl,
   });
 
   factory TeacherChildLink.fromMap(Map<String, dynamic> map, String id) =>
@@ -104,19 +124,23 @@ class TeacherChildLink {
         id: id,
         teacherId: map['teacherId'] ?? '',
         teacherName: map['teacherName'] ?? '',
+        teacherAvatarUrl: map['teacherAvatarUrl'] ?? '',
         childId: map['childId'] ?? '',
         childName: map['childName'] ?? '',
         subject: map['subject'] ?? '',
         createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+        childAvatarUrl: map['childAvatarUrl'] ?? '',
       );
 
   Map<String, dynamic> toMap() => {
     'teacherId': teacherId,
     'teacherName': teacherName,
+    'teacherAvatarUrl': teacherAvatarUrl,
     'childId': childId,
     'childName': childName,
     'subject': subject,
     'createdAt': Timestamp.fromDate(createdAt),
+    'childAvatarUrl': childAvatarUrl,
   };
 }
 
@@ -125,6 +149,7 @@ class GroupChat {
   final String id;
   final String name;
   final String teacherId;
+  final String teacherAvatarUrl; // teacher asset path
   final String childId;
   final List<String> memberIds;
   final String? lastMessage;
@@ -135,6 +160,7 @@ class GroupChat {
     required this.id,
     required this.name,
     required this.teacherId,
+    this.teacherAvatarUrl = '',
     required this.childId,
     required this.memberIds,
     this.lastMessage,
@@ -146,6 +172,7 @@ class GroupChat {
     id: id,
     name: map['name'] ?? '',
     teacherId: map['teacherId'] ?? '',
+    teacherAvatarUrl: map['teacherAvatarUrl'] ?? '',
     childId: map['childId'] ?? '',
     memberIds: List<String>.from(map['memberIds'] ?? []),
     lastMessage: map['lastMessage'],
@@ -156,6 +183,7 @@ class GroupChat {
   Map<String, dynamic> toMap() => {
     'name': name,
     'teacherId': teacherId,
+    'teacherAvatarUrl': teacherAvatarUrl,
     'childId': childId,
     'memberIds': memberIds,
     'lastMessage': lastMessage,
@@ -166,22 +194,81 @@ class GroupChat {
   };
 }
 
+//  Attachment Model
+class ChatAttachment {
+  final String url;
+  final String filename;
+  final String type; // 'image', 'file'
+
+  ChatAttachment({
+    required this.url,
+    required this.filename,
+    required this.type,
+  });
+
+  bool get isImage => type == 'image';
+
+  factory ChatAttachment.fromMap(Map<String, dynamic> map) => ChatAttachment(
+    url: map['url'] ?? '',
+    filename: map['filename'] ?? '',
+    type: map['type'] ?? 'file',
+  );
+
+  Map<String, dynamic> toMap() => {
+    'url': url,
+    'filename': filename,
+    'type': type,
+  };
+}
+
+//  AssignmentAttachment Model
+class AssignmentAttachment {
+  final String url;
+  final String filename;
+  final String type;
+
+  AssignmentAttachment({
+    required this.url,
+    required this.filename,
+    required this.type,
+  });
+
+  bool get isImage => type == 'image';
+
+  factory AssignmentAttachment.fromMap(Map<String, dynamic> map) =>
+      AssignmentAttachment(
+        url: map['url'] ?? '',
+        filename: map['filename'] ?? '',
+        type: map['type'] ?? 'file',
+      );
+
+  Map<String, dynamic> toMap() => {
+    'url': url,
+    'filename': filename,
+    'type': type,
+  };
+}
+
 // Message Model
 class Message {
   final String id;
   final String chatId;
   final String senderId;
   final String senderName;
+  final String senderAvatarUrl; // asset path
   final String text;
   final DateTime sentAt;
+  final List<ChatAttachment> attachments;
 
   Message({
     required this.id,
     required this.chatId,
     required this.senderId,
     required this.senderName,
+    this.senderAvatarUrl = '',
     required this.text,
     required this.sentAt,
+    this.attachments = const [],
   });
 
   factory Message.fromMap(Map<String, dynamic> map, String id) => Message(
@@ -189,16 +276,22 @@ class Message {
     chatId: map['chatId'] ?? '',
     senderId: map['senderId'] ?? '',
     senderName: map['senderName'] ?? '',
+    senderAvatarUrl: map['senderAvatarUrl'] ?? '',
     text: map['text'] ?? '',
     sentAt: (map['sentAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+    attachments: (map['attachments'] as List<dynamic>? ?? [])
+        .map((e) => ChatAttachment.fromMap(Map<String, dynamic>.from(e)))
+        .toList(),
   );
 
   Map<String, dynamic> toMap() => {
     'chatId': chatId,
     'senderId': senderId,
     'senderName': senderName,
+    'senderAvatarUrl': senderAvatarUrl,
     'text': text,
     'sentAt': Timestamp.fromDate(sentAt),
+    'attachments': attachments.map((a) => a.toMap()).toList(),
   };
 }
 
@@ -215,6 +308,7 @@ class Assignment {
   final DateTime dueDate;
   final AssignmentStatus status;
   final DateTime createdAt;
+  final List<AssignmentAttachment> attachments;
 
   Assignment({
     required this.id,
@@ -228,6 +322,7 @@ class Assignment {
     required this.dueDate,
     required this.status,
     required this.createdAt,
+    this.attachments = const [],
   });
 
   factory Assignment.fromMap(Map<String, dynamic> map, String id) => Assignment(
@@ -242,6 +337,9 @@ class Assignment {
     dueDate: (map['dueDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
     status: _statusFromString(map['status'] ?? 'pending'),
     createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+    attachments: (map['attachments'] as List<dynamic>? ?? [])
+        .map((e) => AssignmentAttachment.fromMap(Map<String, dynamic>.from(e)))
+        .toList(),
   );
 
   static AssignmentStatus _statusFromString(String s) {
@@ -277,6 +375,7 @@ class Assignment {
     'dueDate': Timestamp.fromDate(dueDate),
     'status': statusString,
     'createdAt': Timestamp.fromDate(createdAt),
+    'attachments': attachments.map((a) => a.toMap()).toList(),
   };
 }
 
@@ -291,6 +390,7 @@ class Submission {
   final String? teacherFeedback;
   final int? marks;
   final DateTime? reviewedAt;
+  final List<AssignmentAttachment> attachments;
 
   Submission({
     required this.id,
@@ -302,6 +402,7 @@ class Submission {
     this.teacherFeedback,
     this.marks,
     this.reviewedAt,
+    this.attachments = const [],
   });
 
   factory Submission.fromMap(Map<String, dynamic> map, String id) => Submission(
@@ -318,6 +419,9 @@ class Submission {
     teacherFeedback: map['teacherFeedback'],
     marks: map['marks'],
     reviewedAt: (map['reviewedAt'] as Timestamp?)?.toDate(),
+    attachments: (map['attachments'] as List<dynamic>? ?? [])
+        .map((e) => AssignmentAttachment.fromMap(Map<String, dynamic>.from(e)))
+        .toList(),
   );
 
   Map<String, dynamic> toMap() => {
@@ -333,6 +437,7 @@ class Submission {
     'teacherFeedback': teacherFeedback,
     'marks': marks,
     'reviewedAt': reviewedAt != null ? Timestamp.fromDate(reviewedAt!) : null,
+    'attachments': attachments.map((a) => a.toMap()).toList(),
   };
 }
 
@@ -349,6 +454,7 @@ class ProgressUpdate {
   final int improvement;
   final String? notes;
   final DateTime updatedAt;
+  final String teacherSubject;
 
   ProgressUpdate({
     required this.id,
@@ -362,6 +468,7 @@ class ProgressUpdate {
     required this.improvement,
     this.notes,
     required this.updatedAt,
+    required this.teacherSubject,
   });
 
   double get overall =>
@@ -380,6 +487,7 @@ class ProgressUpdate {
         improvement: map['improvement'] ?? 0,
         notes: map['notes'],
         updatedAt: (map['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+        teacherSubject: map['teacherSubject'] ?? '',
       );
 
   Map<String, dynamic> toMap() => {
@@ -393,5 +501,6 @@ class ProgressUpdate {
     'improvement': improvement,
     'notes': notes,
     'updatedAt': Timestamp.fromDate(updatedAt),
+    'teacherSubject': teacherSubject,
   };
 }

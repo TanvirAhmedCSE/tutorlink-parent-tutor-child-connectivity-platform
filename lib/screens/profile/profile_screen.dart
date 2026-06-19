@@ -4,6 +4,7 @@ import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
 import '../../utils/theme.dart';
 import '../../widgets/widgets.dart';
+import '../auth/setup_profile_picture_screen.dart';
 import '../progress/student_progress_screen.dart';
 import '../../utils/constants.dart';
 
@@ -13,18 +14,25 @@ class ProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    switch (user.role) {
-      case UserRole.parent:
-        return _ParentProfile(user: user);
-      case UserRole.teacher:
-        return _TeacherProfile(user: user);
-      case UserRole.child:
-        return _ChildProfile(user: user);
-    }
+    return StreamBuilder<AppUser?>(
+      stream: FirestoreService().userStream(user.uid),
+      builder: (context, snap) {
+        final current = snap.data ?? user;
+        switch (current.role) {
+          case UserRole.parent:
+            return _ParentProfile(user: current);
+          case UserRole.teacher:
+            return _TeacherProfile(user: current);
+          case UserRole.child:
+            return _ChildProfile(user: current);
+        }
+      },
+    );
   }
 }
 
 //  Shared Profile Header
+
 class _ProfileHeader extends StatelessWidget {
   final AppUser user;
 
@@ -47,13 +55,32 @@ class _ProfileHeader extends StatelessWidget {
       padding: const EdgeInsets.all(24),
       child: Column(
         children: [
-          AppAvatar(
+          // rectangle avatar instead of circle
+          RectAvatar(
+            imagePath: user.avatarUrl,
             name: user.name,
-            imageUrl: user.avatarUrl,
-            radius: 40,
-            backgroundColor: _roleColor.withValues(alpha: 0.15),
+            width: 88,
+            height: 112,
+            borderRadius: 18,
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
+          // change picture button
+          TextButton.icon(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) =>
+                    SetupProfilePictureScreen(user: user, isUpdate: true),
+              ),
+            ),
+            icon: const Icon(Icons.edit_outlined, size: 15),
+            label: const Text('Change Profile Picture'),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              textStyle: const TextStyle(fontSize: 13),
+            ),
+          ),
+          const SizedBox(height: 6),
           Text(
             user.name,
             style: const TextStyle(
@@ -100,6 +127,7 @@ class _ProfileHeader extends StatelessWidget {
 }
 
 //  Parent Profile
+
 class _ParentProfile extends StatelessWidget {
   final AppUser user;
   final _fs = FirestoreService();
@@ -121,8 +149,6 @@ class _ParentProfile extends StatelessWidget {
             _ProfileHeader(user: user),
             const Divider(),
             const SizedBox(height: 8),
-
-            //  My Children + Add Link button
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: SectionHeader(
@@ -160,8 +186,6 @@ class _ParentProfile extends StatelessWidget {
             const SizedBox(height: 8),
             const Divider(),
             const SizedBox(height: 8),
-
-            //  Linked Teachers
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: SectionHeader(title: 'Linked Teachers'),
@@ -180,7 +204,6 @@ class _ParentProfile extends StatelessWidget {
                     ),
                   );
                 }
-                // Deduplicate by teacherId
                 final seen = <String>{};
                 final unique = links
                     .where((l) => seen.add(l.teacherId))
@@ -193,12 +216,14 @@ class _ParentProfile extends StatelessWidget {
                             horizontal: 20,
                             vertical: 4,
                           ),
-                          leading: AppAvatar(
+                          leading: RectAvatar(
+                            imagePath: l.teacherAvatarUrl.isNotEmpty
+                                ? l.teacherAvatarUrl
+                                : null,
                             name: l.teacherName,
-                            radius: 22,
-                            backgroundColor: AppColors.teacherColor.withValues(
-                              alpha: 0.15,
-                            ),
+                            width: 36,
+                            height: 46,
+                            borderRadius: 8,
                           ),
                           title: Text(
                             l.teacherName,
@@ -270,91 +295,7 @@ class _ParentProfile extends StatelessWidget {
   }
 
   Future<void> _logout(BuildContext context) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        contentPadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
-        actionsPadding: const EdgeInsets.all(16),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                color: AppColors.error.withValues(alpha: 0.10),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.logout_rounded,
-                color: AppColors.error,
-                size: 28,
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Logout',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Are you sure you want to logout?',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-        actions: [
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    side: const BorderSide(color: Colors.black),
-                  ),
-                  child: const Text(
-                    'Cancel',
-                    style: TextStyle(color: AppColors.textPrimary),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.error,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: const Text(
-                    'Logout',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
+    final confirm = await _showLogoutDialog(context);
     if (confirm == true) {
       await _auth.logout();
       if (context.mounted) Navigator.pushReplacementNamed(context, '/login');
@@ -363,6 +304,7 @@ class _ParentProfile extends StatelessWidget {
 }
 
 //  Teacher Profile
+
 class _TeacherProfile extends StatelessWidget {
   final AppUser user;
   final _fs = FirestoreService();
@@ -411,7 +353,15 @@ class _TeacherProfile extends StatelessWidget {
                             horizontal: 20,
                             vertical: 4,
                           ),
-                          leading: AppAvatar(name: l.childName, radius: 22),
+                          leading: RectAvatar(
+                            imagePath: l.childAvatarUrl.isNotEmpty
+                                ? l.childAvatarUrl
+                                : null,
+                            name: l.childName,
+                            width: 36,
+                            height: 46,
+                            borderRadius: 8,
+                          ),
                           title: Text(
                             l.childName,
                             style: const TextStyle(fontWeight: FontWeight.w600),
@@ -473,109 +423,24 @@ class _TeacherProfile extends StatelessWidget {
           icon: Icons.logout_rounded,
           label: 'Logout',
           color: AppColors.error,
-          onTap: () => _logout(context),
+          onTap: () async {
+            final confirm = await _showLogoutDialog(context);
+            if (confirm == true) {
+              await _auth.logout();
+              if (context.mounted) {
+                Navigator.pushReplacementNamed(context, '/login');
+              }
+            }
+          },
         ),
         const SizedBox(height: 20),
       ],
     );
   }
-
-  Future<void> _logout(BuildContext context) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        contentPadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
-        actionsPadding: const EdgeInsets.all(16),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                color: AppColors.error.withValues(alpha: 0.10),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.logout_rounded,
-                color: AppColors.error,
-                size: 28,
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Logout',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Are you sure you want to logout?',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-        actions: [
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    side: const BorderSide(color: Colors.black),
-                  ),
-                  child: const Text(
-                    'Cancel',
-                    style: TextStyle(color: AppColors.textPrimary),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.error,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: const Text(
-                    'Logout',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-    if (confirm == true) {
-      await _auth.logout();
-      if (context.mounted) {
-        Navigator.pushReplacementNamed(context, '/login');
-      }
-    }
-  }
 }
 
 //  Child Profile
+
 class _ChildProfile extends StatelessWidget {
   final AppUser user;
   final _fs = FirestoreService();
@@ -624,12 +489,14 @@ class _ChildProfile extends StatelessWidget {
                             horizontal: 20,
                             vertical: 4,
                           ),
-                          leading: AppAvatar(
+                          leading: RectAvatar(
+                            imagePath: l.teacherAvatarUrl.isNotEmpty
+                                ? l.teacherAvatarUrl
+                                : null,
                             name: l.teacherName,
-                            radius: 22,
-                            backgroundColor: AppColors.teacherColor.withValues(
-                              alpha: 0.15,
-                            ),
+                            width: 36,
+                            height: 46,
+                            borderRadius: 8,
                           ),
                           title: Text(
                             l.teacherName,
@@ -661,7 +528,15 @@ class _ChildProfile extends StatelessWidget {
                   icon: Icons.logout_rounded,
                   label: 'Logout',
                   color: AppColors.error,
-                  onTap: () => _logout(context),
+                  onTap: () async {
+                    final confirm = await _showLogoutDialog(context);
+                    if (confirm == true) {
+                      await _auth.logout();
+                      if (context.mounted) {
+                        Navigator.pushReplacementNamed(context, '/login');
+                      }
+                    }
+                  },
                 ),
                 const SizedBox(height: 20),
               ],
@@ -671,103 +546,10 @@ class _ChildProfile extends StatelessWidget {
       ),
     );
   }
-
-  Future<void> _logout(BuildContext context) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        contentPadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
-        actionsPadding: const EdgeInsets.all(16),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                color: AppColors.error.withValues(alpha: 0.10),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.logout_rounded,
-                color: AppColors.error,
-                size: 28,
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Logout',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Are you sure you want to logout?',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-        actions: [
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    side: const BorderSide(color: Colors.black),
-                  ),
-                  child: const Text(
-                    'Cancel',
-                    style: TextStyle(color: AppColors.textPrimary),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.error,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: const Text(
-                    'Logout',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-    if (confirm == true) {
-      await _auth.logout();
-      if (context.mounted) {
-        Navigator.pushReplacementNamed(context, '/login');
-      }
-    }
-  }
 }
 
 //  Shared Widgets
+
 class _ChildListTile extends StatelessWidget {
   final Child child;
   const _ChildListTile({required this.child});
@@ -776,10 +558,12 @@ class _ChildListTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-      leading: AppAvatar(
+      leading: RectAvatar(
+        imagePath: child.avatarUrl,
         name: child.name,
-        radius: 22,
-        backgroundColor: AppColors.childColor.withValues(alpha: 0.15),
+        width: 36,
+        height: 46,
+        borderRadius: 8,
       ),
       title: Text(
         child.name,
@@ -805,6 +589,7 @@ class _ChildListTile extends StatelessWidget {
 }
 
 //  Parent Add Link Sheet
+
 class _ParentAddLinkSheet extends StatefulWidget {
   final AppUser parent;
   const _ParentAddLinkSheet({required this.parent});
@@ -941,8 +726,6 @@ class _ParentAddLinkSheetState extends State<_ParentAddLinkSheet> {
               style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
             ),
             const SizedBox(height: 20),
-
-            // Teacher email
             TextField(
               controller: _teacherEmailCtrl,
               keyboardType: TextInputType.emailAddress,
@@ -952,8 +735,6 @@ class _ParentAddLinkSheetState extends State<_ParentAddLinkSheet> {
               ),
             ),
             const SizedBox(height: 14),
-
-            // Subject
             TextField(
               controller: _subjectCtrl,
               textCapitalization: TextCapitalization.words,
@@ -963,8 +744,6 @@ class _ParentAddLinkSheetState extends State<_ParentAddLinkSheet> {
               ),
             ),
             const SizedBox(height: 20),
-
-            // Student emails
             Row(
               children: [
                 const Text(
@@ -988,7 +767,6 @@ class _ParentAddLinkSheetState extends State<_ParentAddLinkSheet> {
               ],
             ),
             const SizedBox(height: 8),
-
             ...List.generate(
               _childEmailCtrls.length,
               (i) => Column(
@@ -1029,7 +807,6 @@ class _ParentAddLinkSheetState extends State<_ParentAddLinkSheet> {
                 ],
               ),
             ),
-
             if (_globalError != null)
               Container(
                 padding: const EdgeInsets.all(12),
@@ -1061,7 +838,6 @@ class _ParentAddLinkSheetState extends State<_ParentAddLinkSheet> {
                   ],
                 ),
               ),
-
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -1086,6 +862,7 @@ class _ParentAddLinkSheetState extends State<_ParentAddLinkSheet> {
 }
 
 //  Settings Tile
+
 class _SettingsTile extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -1123,4 +900,94 @@ class _SettingsTile extends StatelessWidget {
       onTap: onTap,
     );
   }
+}
+
+//  Logout Dialog (shared)
+
+Future<bool?> _showLogoutDialog(BuildContext context) {
+  return showDialog<bool>(
+    context: context,
+    builder: (_) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      contentPadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+      actionsPadding: const EdgeInsets.all(16),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: AppColors.error.withValues(alpha: 0.10),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.logout_rounded,
+              color: AppColors.error,
+              size: 28,
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Logout',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Are you sure you want to logout?',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+      actions: [
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () => Navigator.pop(context, false),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  side: const BorderSide(color: Colors.black),
+                ),
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(color: AppColors.textPrimary),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.error,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 0,
+                ),
+                child: const Text(
+                  'Logout',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
 }

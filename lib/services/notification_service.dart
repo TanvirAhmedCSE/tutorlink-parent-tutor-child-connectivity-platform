@@ -1,118 +1,84 @@
-import 'package:awesome_notifications/awesome_notifications.dart';
-import '../utils/theme.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:onesignal_flutter/onesignal_flutter.dart';
 
 class NotificationService {
+  static const String _appId = 'XXXXXXXXXXXXXXXXXXXXX';
+  static const String _restApiKey =
+      'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
+
   static Future<void> init() async {
-    await AwesomeNotifications().initialize(
-      null, // use default app icon
-      [
-        NotificationChannel(
-          channelKey: 'messages_channel',
-          channelName: 'Messages',
-          channelDescription: 'Chat messages from TutorLink',
-          defaultColor: AppColors.primary,
-          ledColor: AppColors.primary,
-          importance: NotificationImportance.High,
-          channelShowBadge: true,
-        ),
-        NotificationChannel(
-          channelKey: 'assignments_channel',
-          channelName: 'Assignments',
-          channelDescription: 'Assignment notifications',
-          defaultColor: AppColors.secondary,
-          ledColor: AppColors.secondary,
-          importance: NotificationImportance.Default,
-          channelShowBadge: true,
-        ),
-        NotificationChannel(
-          channelKey: 'progress_channel',
-          channelName: 'Progress Updates',
-          channelDescription: 'Progress update notifications',
-          defaultColor: AppColors.accent,
-          ledColor: AppColors.accent,
-          importance: NotificationImportance.Default,
-          channelShowBadge: false,
-        ),
-      ],
-    );
+    OneSignal.initialize(_appId);
+    await OneSignal.Notifications.requestPermission(true);
   }
 
-  static Future<void> requestPermission() async {
-    await AwesomeNotifications().requestPermissionToSendNotifications();
+  static Future<void> loginUser(String uid) async {
+    await OneSignal.login(uid);
   }
 
-  static Future<bool> isAllowed() async {
-    return await AwesomeNotifications().isNotificationAllowed();
+  static Future<void> logoutUser() async {
+    await OneSignal.logout();
   }
 
-  //  New message notification
-  static Future<void> showMessageNotification({
-    required String senderName,
-    required String groupName,
-    required String message,
-  }) async {
-    await AwesomeNotifications().createNotification(
-      content: NotificationContent(
-        id: DateTime.now().millisecondsSinceEpoch.remainder(100000),
-        channelKey: 'messages_channel',
-        title: '$senderName in $groupName',
-        body: message,
-        notificationLayout: NotificationLayout.Default,
-      ),
-    );
-  }
-
-  //  New assignment notification
-  static Future<void> showAssignmentNotification({
+  // Assignment notification — to child
+  static Future<void> sendAssignmentNotificationToChild({
+    required String childUid,
     required String teacherName,
-    required String assignmentTitle,
-    required String childName,
-  }) async {
-    await AwesomeNotifications().createNotification(
-      content: NotificationContent(
-        id: DateTime.now().millisecondsSinceEpoch.remainder(100000),
-        channelKey: 'assignments_channel',
-        title: 'New Assignment for $childName',
-        body: '$teacherName posted: $assignmentTitle',
-        notificationLayout: NotificationLayout.Default,
-      ),
-    );
-  }
-
-  //  Submission reviewed notification
-  static Future<void> showReviewNotification({
-    required String assignmentTitle,
-    required String status,
-  }) async {
-    await AwesomeNotifications().createNotification(
-      content: NotificationContent(
-        id: DateTime.now().millisecondsSinceEpoch.remainder(100000),
-        channelKey: 'assignments_channel',
-        title: 'Assignment Reviewed',
-        body: '"$assignmentTitle" has been reviewed: $status',
-        notificationLayout: NotificationLayout.Default,
-      ),
-    );
-  }
-
-  //  Progress updated notification
-  static Future<void> showProgressNotification({
-    required String teacherName,
-    required String childName,
     required String subject,
+    required String assignmentTitle,
+    required String assignmentId,
   }) async {
-    await AwesomeNotifications().createNotification(
-      content: NotificationContent(
-        id: DateTime.now().millisecondsSinceEpoch.remainder(100000),
-        channelKey: 'progress_channel',
-        title: 'Progress Updated',
-        body: '$teacherName updated $childName\'s $subject progress',
-        notificationLayout: NotificationLayout.Default,
-      ),
+    await _sendPush(
+      targetUids: [childUid],
+      heading: 'New Assignment: $subject',
+      content: '$teacherName has given a new assignment: "$assignmentTitle"',
+      data: {'assignmentId': assignmentId},
     );
   }
 
-  static void dispose() {
-    AwesomeNotifications().dispose();
+  // Assignment notification — to parent
+  static Future<void> sendAssignmentNotificationToParents({
+    required List<String> parentUids,
+    required String childName,
+    required String teacherName,
+    required String subject,
+    required String assignmentTitle,
+    required String assignmentId,
+  }) async {
+    if (parentUids.isEmpty) return;
+    await _sendPush(
+      targetUids: parentUids,
+      heading: 'New Assignment for $childName',
+      content:
+          '$teacherName has assigned "$assignmentTitle" in "$subject" to $childName.',
+      data: {'assignmentId': assignmentId},
+    );
+  }
+
+  static Future<void> _sendPush({
+    required List<String> targetUids,
+    required String heading,
+    required String content,
+    required Map<String, dynamic> data,
+  }) async {
+    try {
+      await http.post(
+        Uri.parse('https://onesignal.com/api/v1/notifications'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Key $_restApiKey',
+        },
+        body: jsonEncode({
+          'app_id': _appId,
+          'include_aliases': {'external_id': targetUids},
+          'target_channel': 'push',
+          'headings': {'en': heading},
+          'contents': {'en': content},
+          'data': data,
+        }),
+      );
+    } catch (e) {
+      // If notification fails, assignment will also be created — silent fail
+    }
   }
 }

@@ -4,6 +4,7 @@ import '../../services/firestore_service.dart';
 import '../../utils/constants.dart';
 import '../../utils/theme.dart';
 import '../../widgets/widgets.dart';
+import '../auth/setup_profile_picture_screen.dart';
 import '../progress/student_progress_screen.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -12,18 +13,25 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    switch (user.role) {
-      case UserRole.parent:
-        return _ParentHome(user: user);
-      case UserRole.teacher:
-        return _TeacherHome(user: user);
-      case UserRole.child:
-        return _ChildHome(user: user);
-    }
+    return StreamBuilder<AppUser?>(
+      stream: FirestoreService().userStream(user.uid),
+      builder: (context, snap) {
+        final current = snap.data ?? user;
+        switch (current.role) {
+          case UserRole.parent:
+            return _ParentHome(user: current);
+          case UserRole.teacher:
+            return _TeacherHome(user: current);
+          case UserRole.child:
+            return _ChildHome(user: current);
+        }
+      },
+    );
   }
 }
 
-// Parent Home
+//  Parent Home
+
 class _ParentHome extends StatelessWidget {
   final AppUser user;
   final _fs = FirestoreService();
@@ -48,9 +56,9 @@ class _ParentHome extends StatelessWidget {
                     children: [
                       _buildSummaryCards(children),
                       const SizedBox(height: 24),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: const SectionHeader(title: 'My Children'),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 20),
+                        child: SectionHeader(title: 'My Children'),
                       ),
                       const SizedBox(height: 12),
                       if (children.isEmpty)
@@ -80,58 +88,74 @@ class _ParentHome extends StatelessWidget {
     final minute = DateTime.now().minute;
     final totalMinutes = hour * 60 + minute;
 
-    final greeting =
-        totalMinutes <
-            5 *
-                60 // 12:00 AM - 4:59 AM
-        ? 'Good night'
-        : totalMinutes <
-              12 *
-                  60 // 5:00 AM - 11:59 AM
-        ? 'Good morning'
-        : totalMinutes <
-              16 *
-                  60 // 12:00 PM - 3:59 PM
-        ? 'Good noon'
-        : totalMinutes <
-              18 * 60 +
-                  30 // 4:00 PM - 6:29 PM
-        ? 'Good afternoon'
-        : totalMinutes <
-              20 *
-                  60 // 6:30 PM - 7:59 PM
-        ? 'Good evening'
-        : 'Good night'; // 8:00 PM - 4:59 AM
+    final String greeting;
+    final String greetingImage;
+
+    if (totalMinutes < 5 * 60) {
+      greeting = 'Good night';
+      greetingImage = 'assets/images/greeting_images/good_night.png';
+    } else if (totalMinutes < 12 * 60) {
+      greeting = 'Good morning';
+      greetingImage = 'assets/images/greeting_images/good_morning.png';
+    } else if (totalMinutes < 16 * 60) {
+      greeting = 'Good noon';
+      greetingImage = 'assets/images/greeting_images/good_noon.png';
+    } else if (totalMinutes < 18 * 60 + 30) {
+      greeting = 'Good afternoon';
+      greetingImage = 'assets/images/greeting_images/good_afternoon.png';
+    } else if (totalMinutes < 20 * 60) {
+      greeting = 'Good evening';
+      greetingImage = 'assets/images/greeting_images/good_evening.png';
+    } else {
+      greeting = 'Good night';
+      greetingImage = 'assets/images/greeting_images/good_night.png';
+    }
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Text(
-                  greeting,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: AppColors.textSecondary,
-                    fontWeight: FontWeight.w500,
-                  ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      greeting,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    Text(
+                      user.name,
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
                 ),
-                Text(
-                  user.name,
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                  ),
+                const SizedBox(width: 12),
+                Image.asset(
+                  greetingImage,
+                  width: greeting == 'Good night' ? 39 : 52,
+                  height: greeting == 'Good night' ? 39 : 52,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
                 ),
               ],
             ),
           ),
-          AppAvatar(
+          RectAvatar(
+            imagePath: user.avatarUrl,
             name: user.name,
-            radius: 22,
-            backgroundColor: AppColors.primaryFaint,
+            width: 44,
+            height: 56,
           ),
         ],
       ),
@@ -176,6 +200,10 @@ class _ChildCard extends StatelessWidget {
 
   _ChildCard({required this.child});
 
+  // resolve child's color — fall back to primary if none set
+  Color get _childColor =>
+      child.avatarColor != null ? Color(child.avatarColor!) : AppColors.primary;
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -194,7 +222,7 @@ class _ChildCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppColors.card,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.divider),
+            border: Border.all(color: Colors.black),
           ),
           child: StreamBuilder<List<ProgressUpdate>>(
             stream: _fs.childProgressStream(child.id),
@@ -204,11 +232,16 @@ class _ChildCard extends StatelessWidget {
                   ? 0.0
                   : progress.fold(0.0, (s, p) => s + p.overall) /
                         progress.length;
-              final pendingAssignments = 0;
 
               return Row(
                 children: [
-                  AppAvatar(name: child.name, radius: 26),
+                  // main avatar
+                  RectAvatar(
+                    imagePath: child.avatarUrl,
+                    name: child.name,
+                    width: 44,
+                    height: 56,
+                  ),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(
@@ -230,18 +263,19 @@ class _ChildCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        LinearProgressIndicator(
-                          value: (overall / 100).clamp(0.0, 1.0),
-                          backgroundColor: AppColors.divider,
-                          valueColor: AlwaysStoppedAnimation(
-                            overall >= 80
-                                ? AppColors.success
-                                : overall >= 60
-                                ? AppColors.warning
-                                : AppColors.error,
-                          ),
-                          borderRadius: BorderRadius.circular(4),
-                          minHeight: 6,
+                        // progress bar — width choto
+                        Row(
+                          children: [
+                            Expanded(
+                              child: LinearProgressIndicator(
+                                value: (overall / 100).clamp(0.0, 1.0),
+                                backgroundColor: AppColors.divider,
+                                valueColor: AlwaysStoppedAnimation(_childColor),
+                                borderRadius: BorderRadius.circular(4),
+                                minHeight: 6,
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 4),
                         Text(
@@ -255,7 +289,53 @@ class _ChildCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  ProgressRing(percent: overall, radius: 28, showText: true),
+                  ProgressRing(
+                    percent: overall,
+                    radius: 28,
+                    color: _childColor,
+                    showText: true,
+                  ),
+                  const SizedBox(width: 8),
+
+                  // second image
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child:
+                        child.secondAvatarUrl != null &&
+                            child.secondAvatarUrl!.isNotEmpty
+                        ? Image.asset(
+                            child.secondAvatarUrl!,
+                            width: 58,
+                            height: 70,
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) => Container(
+                              width: 48,
+                              height: 60,
+                              decoration: BoxDecoration(
+                                color: AppColors.divider,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(
+                                Icons.person_rounded,
+                                size: 28,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          )
+                        : Container(
+                            width: 48,
+                            height: 60,
+                            decoration: BoxDecoration(
+                              color: AppColors.divider,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(
+                              Icons.person_rounded,
+                              size: 28,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                  ),
                 ],
               );
             },
@@ -267,6 +347,7 @@ class _ChildCard extends StatelessWidget {
 }
 
 //  Teacher Home
+
 class _TeacherHome extends StatelessWidget {
   final AppUser user;
   final _fs = FirestoreService();
@@ -312,13 +393,13 @@ class _TeacherHome extends StatelessWidget {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: AppColors.teacherColor.withValues(alpha: 0.1),
+                        color: AppColors.teacherColor,
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: const Text(
                         'Teacher',
                         style: TextStyle(
-                          color: AppColors.teacherColor,
+                          color: Colors.white,
                           fontWeight: FontWeight.w700,
                           fontSize: 12,
                         ),
@@ -419,7 +500,13 @@ class _StudentTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-      leading: AppAvatar(name: link.childName, radius: 22),
+      leading: RectAvatar(
+        imagePath: link.childAvatarUrl.isNotEmpty ? link.childAvatarUrl : null,
+        name: link.childName,
+        width: 36,
+        height: 46,
+        borderRadius: 8,
+      ),
       title: Text(
         link.childName,
         style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
@@ -455,6 +542,7 @@ class _StudentTile extends StatelessWidget {
 }
 
 //  Child Home
+
 class _ChildHome extends StatelessWidget {
   final AppUser user;
   final _fs = FirestoreService();
@@ -503,13 +591,13 @@ class _ChildHome extends StatelessWidget {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: AppColors.childColor.withValues(alpha: 0.1),
+                            color: AppColors.childColor,
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: const Text(
                             'Student',
                             style: TextStyle(
-                              color: AppColors.childColor,
+                              color: Colors.white,
                               fontWeight: FontWeight.w700,
                               fontSize: 12,
                             ),
@@ -566,7 +654,7 @@ class _ChildHome extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  '${progress.length} subject${progress.length == 1 ? '' : 's'} tracked',
+                                  '${progress.length} progress${progress.length == 1 ? '' : 's'} tracked',
                                   style: const TextStyle(
                                     color: Colors.white70,
                                     fontSize: 12,
@@ -588,10 +676,10 @@ class _ChildHome extends StatelessWidget {
                 },
               ),
             ),
-            SliverToBoxAdapter(
+            const SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: const SectionHeader(title: 'My Subjects'),
+                padding: EdgeInsets.fromLTRB(20, 0, 20, 7),
+                child: SectionHeader(title: 'My Subjects'),
               ),
             ),
             SliverToBoxAdapter(
@@ -618,10 +706,10 @@ class _ChildHome extends StatelessWidget {
                 },
               ),
             ),
-            SliverToBoxAdapter(
+            const SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-                child: const SectionHeader(title: 'Recent Feedback'),
+                padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
+                child: SectionHeader(title: 'Recent Feedback'),
               ),
             ),
             SliverToBoxAdapter(

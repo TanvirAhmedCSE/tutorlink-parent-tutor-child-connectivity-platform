@@ -5,6 +5,8 @@ import '../../services/firestore_service.dart';
 import '../../utils/theme.dart';
 import '../../widgets/widgets.dart';
 import '../../utils/constants.dart';
+import '../../widgets/attachment_widgets.dart';
+import '../../services/cloudinary_service.dart';
 
 class AssignmentDetailScreen extends StatefulWidget {
   final Assignment assignment;
@@ -24,10 +26,12 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
   final _fs = FirestoreService();
   Submission? _submission;
   bool _loadingSubmission = true;
+  late AssignmentStatus _localStatus;
 
   @override
   void initState() {
     super.initState();
+    _localStatus = widget.assignment.status;
     _loadSubmission();
   }
 
@@ -74,10 +78,10 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
                     const SizedBox(height: 16),
                   ],
                   if (isTeacher &&
-                      assignment.status == AssignmentStatus.submitted &&
+                      _localStatus == AssignmentStatus.submitted &&
                       _submission != null)
                     _buildReviewButton(context),
-                  if (isChild && assignment.status == AssignmentStatus.pending)
+                  if (isChild && _localStatus == AssignmentStatus.pending)
                     _buildSubmitButton(context),
                   const SizedBox(height: 40),
                 ],
@@ -89,7 +93,7 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
   Widget _buildHeader(Assignment assignment) {
     Color statusColor;
     String statusLabel;
-    switch (assignment.status) {
+    switch (_localStatus) {
       case AssignmentStatus.pending:
         statusColor = AppColors.warning;
         statusLabel = 'Pending';
@@ -133,7 +137,7 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
 
   Widget _buildInfoCard(Assignment assignment) {
     final isOverdue =
-        assignment.status == AssignmentStatus.pending &&
+        _localStatus == AssignmentStatus.pending &&
         assignment.dueDate.isBefore(DateTime.now());
 
     return Container(
@@ -198,6 +202,11 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
             ),
           ),
         ),
+
+        if (assignment.attachments.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          AttachmentViewSection(attachments: assignment.attachments),
+        ],
       ],
     );
   }
@@ -255,6 +264,10 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
                     height: 1.5,
                   ),
                 ),
+              ],
+              if (submission.attachments.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                AttachmentViewSection(attachments: submission.attachments),
               ],
               if (submission.reviewStatus != null) ...[
                 const Divider(height: 24),
@@ -381,6 +394,7 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
         onSubmitted: () {
           _loadSubmission();
           Navigator.pop(context);
+          setState(() => _localStatus = AssignmentStatus.submitted);
         },
       ),
     );
@@ -397,6 +411,7 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
         onReviewed: () {
           _loadSubmission();
           Navigator.pop(context);
+          setState(() => _localStatus = AssignmentStatus.reviewed);
         },
       ),
     );
@@ -466,6 +481,8 @@ class _SubmitSheetState extends State<_SubmitSheet> {
   final _fs = FirestoreService();
   bool _loading = false;
 
+  final List<PendingAttachment> _attachments = [];
+
   @override
   void dispose() {
     _commentCtrl.dispose();
@@ -473,18 +490,39 @@ class _SubmitSheetState extends State<_SubmitSheet> {
   }
 
   Future<void> _submit() async {
-    if (_commentCtrl.text.trim().isEmpty) {
+    final hasText = _commentCtrl.text.trim().isNotEmpty;
+    final hasFiles = _attachments.isNotEmpty;
+
+    if (!hasText && !hasFiles) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Write your answer before submitting')),
+        const SnackBar(
+          content: Text('Write your answer or attach a file before submitting'),
+        ),
       );
       return;
     }
     setState(() => _loading = true);
     try {
+      List<AssignmentAttachment> uploaded = [];
+      if (_attachments.isNotEmpty) {
+        uploaded = await uploadPendingAttachments<AssignmentAttachment>(
+          pending: _attachments,
+          folder: CloudinaryFolder.submissionImages,
+          onProgress: () {
+            if (mounted) setState(() {});
+          },
+          builder: (url, filename, type) =>
+              AssignmentAttachment(url: url, filename: filename, type: type),
+        );
+      }
+
       await _fs.createSubmission(
         assignmentId: widget.assignment.id,
         childId: widget.child.uid,
-        comment: _commentCtrl.text.trim(),
+        comment: _commentCtrl.text.trim().isEmpty
+            ? null
+            : _commentCtrl.text.trim(),
+        attachments: uploaded, // NEW
       );
       if (mounted) {
         widget.onSubmitted();
@@ -550,7 +588,14 @@ class _SubmitSheetState extends State<_SubmitSheet> {
                 alignLabelWithHint: true,
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 12),
+            // NEW: attachment picker
+            AttachmentPickerSection(
+              attachments: _attachments,
+              onAdded: (a) => setState(() => _attachments.add(a)),
+              onRemoved: (i) => setState(() => _attachments.removeAt(i)),
+            ),
+            const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(

@@ -2,7 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/models.dart';
 import '../utils/constants.dart';
-import 'hive_service.dart';
+import 'notification_service.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -13,7 +13,7 @@ class AuthService {
 
   bool get isEmailVerified => _auth.currentUser?.emailVerified ?? false;
 
-  //  Register
+  // Register
   Future<AppUser> register({
     required String name,
     required String email,
@@ -26,7 +26,6 @@ class AuthService {
       password: password,
     );
 
-    // Send verification email
     await cred.user!.sendEmailVerification();
 
     final user = AppUser(
@@ -43,11 +42,10 @@ class AuthService {
         .doc(cred.user!.uid)
         .set(user.toMap());
 
-    await HiveService.saveUser(user);
     return user;
   }
 
-  //  Login
+  // Login
   Future<AppUser> login({
     required String email,
     required String password,
@@ -64,19 +62,15 @@ class AuthService {
 
     if (!doc.exists) throw Exception('User data not found');
 
-    final user = AppUser.fromMap(doc.data()!, doc.id);
-    await HiveService.saveUser(user);
-    return user;
+    final appUser = AppUser.fromMap(doc.data()!, doc.id);
+    await NotificationService.loginUser(appUser.uid);
+    return appUser;
   }
 
-  //  Get current AppUser
+  // Get current AppUser
   Future<AppUser?> getCurrentAppUser() async {
     final firebaseUser = _auth.currentUser;
     if (firebaseUser == null) return null;
-
-    // Try Hive cache first
-    final cached = HiveService.getUser();
-    if (cached != null) return cached;
 
     final doc = await _db
         .collection(AppConstants.usersCol)
@@ -84,29 +78,41 @@ class AuthService {
         .get();
 
     if (!doc.exists) return null;
-    final user = AppUser.fromMap(doc.data()!, doc.id);
-    await HiveService.saveUser(user);
-    return user;
+    return AppUser.fromMap(doc.data()!, doc.id);
   }
 
-  //  Resend Verification
-  Future<void> resendVerificationEmail() async {
-    await _auth.currentUser?.sendEmailVerification();
+  // Resend Verification
+  Future<String?> resendVerificationEmail() async {
+    try {
+      await _auth.currentUser?.sendEmailVerification();
+      return null; // success
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'too-many-requests') {
+        return 'Too many attempts. Please wait a few minutes and try again.';
+      }
+      return e.message ?? 'Failed to send email.';
+    } catch (e) {
+      return 'Something went wrong.';
+    }
   }
 
-  //  Refresh email verified status
+  // Refresh email verified status
   Future<bool> checkEmailVerified() async {
-    await _auth.currentUser?.reload();
-    return _auth.currentUser?.emailVerified ?? false;
+    try {
+      await _auth.currentUser?.reload();
+      return _auth.currentUser?.emailVerified ?? false;
+    } catch (_) {
+      return false;
+    }
   }
 
-  //  Logout
+  // Logout
   Future<void> logout() async {
-    await HiveService.clearAll();
+    await NotificationService.logoutUser();
     await _auth.signOut();
   }
 
-  //  Forgot Password
+  // Forgot Password
   Future<void> sendPasswordReset(String email) async {
     await _auth.sendPasswordResetEmail(email: email);
   }

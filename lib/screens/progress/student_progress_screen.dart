@@ -35,7 +35,6 @@ class _StudentProgressScreenState extends State<StudentProgressScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
-          // Teacher can update progress from here
           if (widget.teacherId != null)
             IconButton(
               icon: const Icon(Icons.edit_rounded),
@@ -52,7 +51,6 @@ class _StudentProgressScreenState extends State<StudentProgressScreen> {
           }
           List<ProgressUpdate> allProgress = snap.data ?? [];
 
-          // If teacherId provided, filter to only that teacher's records
           final progress = widget.teacherId != null
               ? allProgress
                     .where((p) => p.teacherId == widget.teacherId)
@@ -86,7 +84,7 @@ class _StudentProgressScreenState extends State<StudentProgressScreen> {
                 _buildOverallCard(overall, progress.length),
                 const SizedBox(height: 24),
                 const Text(
-                  'Subject Breakdown',
+                  'Progress Breakdown',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
@@ -98,6 +96,9 @@ class _StudentProgressScreenState extends State<StudentProgressScreen> {
                   (p) => _SubjectProgressCard(
                     progress: p,
                     showTeacher: widget.teacherId == null,
+                    onTap: widget.teacherId != null
+                        ? () => _showUpdateProgressSheet(context, existing: p)
+                        : null,
                   ),
                 ),
                 if (progress.any(
@@ -202,7 +203,10 @@ class _StudentProgressScreenState extends State<StudentProgressScreen> {
     );
   }
 
-  void _showUpdateProgressSheet(BuildContext context) {
+  void _showUpdateProgressSheet(
+    BuildContext context, {
+    ProgressUpdate? existing,
+  }) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -211,102 +215,122 @@ class _StudentProgressScreenState extends State<StudentProgressScreen> {
         childId: widget.childId,
         childName: widget.childName,
         teacherId: widget.teacherId!,
+        existing: existing,
       ),
     );
   }
 }
 
 //  Subject Progress Card
+
 class _SubjectProgressCard extends StatelessWidget {
   final ProgressUpdate progress;
   final bool showTeacher;
+  final VoidCallback? onTap;
 
   const _SubjectProgressCard({
     required this.progress,
     required this.showTeacher,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.divider),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      progress.subject,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    if (showTeacher)
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.card,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: onTap != null
+                ? AppColors.primary.withValues(alpha: 0.3)
+                : AppColors.divider,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
-                        progress.teacherName,
+                        progress.subject,
                         style: const TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textSecondary,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
                         ),
                       ),
-                  ],
+                      if (showTeacher)
+                        Text(
+                          progress.teacherName,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
-              ),
-              ProgressRing(
-                percent: progress.overall,
-                radius: 30,
-                showText: true,
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          ScoreBar(
-            label: 'Homework',
-            value: progress.homeworkCompletion,
-            color: AppColors.primary,
-          ),
-          const SizedBox(height: 10),
-          ScoreBar(
-            label: 'Understanding',
-            value: progress.understanding,
-            color: AppColors.info,
-          ),
-          const SizedBox(height: 10),
-          ScoreBar(
-            label: 'Participation',
-            value: progress.participation,
-            color: AppColors.secondary,
-          ),
-          const SizedBox(height: 10),
-          ScoreBar(
-            label: 'Improvement',
-            value: progress.improvement,
-            color: AppColors.accent,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Updated ${DateFormat('MMM d, y').format(progress.updatedAt)}',
-            style: const TextStyle(fontSize: 11, color: AppColors.textHint),
-          ),
-        ],
+                ProgressRing(
+                  percent: progress.overall,
+                  radius: 30,
+                  showText: true,
+                ),
+                if (onTap != null) ...[
+                  const SizedBox(width: 8),
+                  const Icon(
+                    Icons.edit_outlined,
+                    size: 16,
+                    color: AppColors.textHint,
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 16),
+            ScoreBar(
+              label: 'Homework',
+              value: progress.homeworkCompletion,
+              color: AppColors.primary,
+            ),
+            const SizedBox(height: 10),
+            ScoreBar(
+              label: 'Understanding',
+              value: progress.understanding,
+              color: AppColors.info,
+            ),
+            const SizedBox(height: 10),
+            ScoreBar(
+              label: 'Participation',
+              value: progress.participation,
+              color: AppColors.secondary,
+            ),
+            const SizedBox(height: 10),
+            ScoreBar(
+              label: 'Improvement',
+              value: progress.improvement,
+              color: AppColors.accent,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Updated ${DateFormat('MMM d, y').format(progress.updatedAt)}',
+              style: const TextStyle(fontSize: 11, color: AppColors.textHint),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
 //  Note Card
+
 class _NoteCard extends StatelessWidget {
   final ProgressUpdate progress;
   const _NoteCard({required this.progress});
@@ -332,12 +356,14 @@ class _NoteCard extends StatelessWidget {
                 size: 16,
               ),
               const SizedBox(width: 6),
-              Text(
-                '${progress.teacherName} • ${progress.subject}',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textSecondary,
+              Expanded(
+                child: Text(
+                  '${progress.teacherName} (${progress.teacherSubject} Teacher) • ${progress.subject}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ),
             ],
@@ -358,15 +384,18 @@ class _NoteCard extends StatelessWidget {
 }
 
 //  Update Progress Sheet
+
 class _UpdateProgressSheet extends StatefulWidget {
   final String childId;
   final String childName;
   final String teacherId;
+  final ProgressUpdate? existing;
 
   const _UpdateProgressSheet({
     required this.childId,
     required this.childName,
     required this.teacherId,
+    this.existing,
   });
 
   @override
@@ -375,19 +404,27 @@ class _UpdateProgressSheet extends StatefulWidget {
 
 class _UpdateProgressSheetState extends State<_UpdateProgressSheet> {
   final _fs = FirestoreService();
-  final _subjectCtrl = TextEditingController();
-  final _notesCtrl = TextEditingController();
-  int _homework = 70;
-  int _understanding = 70;
-  int _participation = 70;
-  int _improvement = 70;
+  late final TextEditingController _subjectCtrl;
+  late final TextEditingController _notesCtrl;
+  late int _homework;
+  late int _understanding;
+  late int _participation;
+  late int _improvement;
   bool _loading = false;
   String? _teacherName;
+  String? _teacherSubject;
 
   @override
   void initState() {
     super.initState();
+    _subjectCtrl = TextEditingController(text: widget.existing?.subject ?? '');
+    _notesCtrl = TextEditingController(text: widget.existing?.notes ?? '');
+    _homework = widget.existing?.homeworkCompletion ?? 70;
+    _understanding = widget.existing?.understanding ?? 70;
+    _participation = widget.existing?.participation ?? 70;
+    _improvement = widget.existing?.improvement ?? 70;
     _loadTeacherName();
+    _loadTeacherSubject();
   }
 
   Future<void> _loadTeacherName() async {
@@ -395,6 +432,15 @@ class _UpdateProgressSheetState extends State<_UpdateProgressSheet> {
     if (mounted && user != null) {
       setState(() => _teacherName = user.name);
     }
+  }
+
+  Future<void> _loadTeacherSubject() async {
+    final links = await _fs.teacherLinksStream(widget.teacherId).first;
+    final match = links.firstWhere(
+      (l) => l.childId == widget.childId,
+      orElse: () => links.first,
+    );
+    if (mounted) setState(() => _teacherSubject = match.subject);
   }
 
   @override
@@ -423,6 +469,7 @@ class _UpdateProgressSheetState extends State<_UpdateProgressSheet> {
         participation: _participation,
         improvement: _improvement,
         notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
+        teacherSubject: _teacherSubject ?? '',
       );
       if (mounted) {
         Navigator.pop(context);
@@ -437,13 +484,13 @@ class _UpdateProgressSheetState extends State<_UpdateProgressSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final isEdit = widget.existing != null;
+
     return Container(
       decoration: const BoxDecoration(
         color: AppColors.card,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      // padding: EdgeInsets.fromLTRB(
-      //     24, 16, 24, MediaQuery.of(context).viewInsets.bottom + 24),
       padding: EdgeInsets.fromLTRB(
         24,
         16,
@@ -469,15 +516,22 @@ class _UpdateProgressSheetState extends State<_UpdateProgressSheet> {
             ),
             const SizedBox(height: 16),
             Text(
-              'Update Progress — ${widget.childName}',
+              isEdit
+                  ? 'Update Progress — ${widget.existing!.subject}'
+                  : 'Add Progress — ${widget.childName}',
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 20),
             TextField(
               controller: _subjectCtrl,
               textCapitalization: TextCapitalization.words,
-              decoration: const InputDecoration(
-                labelText: 'Subject (e.g. Math)',
+              readOnly: isEdit,
+              decoration: InputDecoration(
+                labelText: 'Subject (e.g. English, Math)',
+                filled: isEdit,
+                fillColor: isEdit
+                    ? AppColors.divider.withValues(alpha: 0.3)
+                    : null,
               ),
             ),
             const SizedBox(height: 20),
@@ -509,7 +563,6 @@ class _UpdateProgressSheetState extends State<_UpdateProgressSheet> {
               onChanged: (v) => setState(() => _improvement = v),
             ),
             const SizedBox(height: 16),
-            // Overall preview
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
@@ -568,6 +621,8 @@ class _UpdateProgressSheetState extends State<_UpdateProgressSheet> {
     );
   }
 }
+
+//  Score Slider
 
 class _ScoreSlider extends StatelessWidget {
   final String label;

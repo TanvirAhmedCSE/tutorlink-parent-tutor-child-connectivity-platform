@@ -1,9 +1,12 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../models/models.dart';
 import '../../services/firestore_service.dart';
+import '../../services/cloudinary_service.dart';
 import '../../utils/theme.dart';
 import '../../widgets/widgets.dart';
 import '../../utils/constants.dart';
+import '../../widgets/attachment_widgets.dart';
 
 class ChatRoomScreen extends StatefulWidget {
   final GroupChat chat;
@@ -23,6 +26,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   final _fs = FirestoreService();
   final _textCtrl = TextEditingController();
   final _scrollCtrl = ScrollController();
+  final List<PendingAttachment> _pendingAttachments = [];
 
   Map<String, AppUser> _members = {};
   bool _membersLoaded = false;
@@ -47,7 +51,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     if (senderId == widget.currentUser.uid) return 'Me';
     final user = _members[senderId];
     if (user == null) return senderName;
-
     final String roleLabel;
     switch (user.role) {
       case UserRole.teacher:
@@ -66,7 +69,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
         }
         break;
     }
-
     return '${user.name} ($roleLabel)';
   }
 
@@ -87,10 +89,39 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     }
   }
 
-  Future<void> _sendText() async {
+  // send with attachments
+  Future<void> _send() async {
     final text = _textCtrl.text.trim();
-    if (text.isEmpty) return;
+    final hasPending = _pendingAttachments.isNotEmpty;
+    if (text.isEmpty && !hasPending) return;
+
     _textCtrl.clear();
+    final attachmentsToUpload = List<PendingAttachment>.from(
+      _pendingAttachments,
+    );
+    setState(() => _pendingAttachments.clear());
+
+    List<ChatAttachment> uploaded = [];
+    if (attachmentsToUpload.isNotEmpty) {
+      try {
+        uploaded = await uploadPendingAttachments<ChatAttachment>(
+          pending: attachmentsToUpload,
+          folder: CloudinaryFolder.chatImages,
+          onProgress: () {
+            if (mounted) setState(() {});
+          },
+          builder: (url, filename, type) =>
+              ChatAttachment(url: url, filename: filename, type: type),
+        );
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Some files failed to upload')),
+          );
+        }
+      }
+    }
+
     final msg = Message(
       id: '',
       chatId: widget.chat.id,
@@ -98,6 +129,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       senderName: widget.currentUser.name,
       text: text,
       sentAt: DateTime.now(),
+      attachments: uploaded,
     );
     await _fs.sendMessage(msg);
     WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
@@ -187,69 +219,173 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
 
   Widget _buildInputBar() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
       decoration: const BoxDecoration(
         color: AppColors.card,
         border: Border(top: BorderSide(color: AppColors.divider)),
       ),
-      child: SafeArea(
-        top: false,
-        child: Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _textCtrl,
-                maxLines: 4,
-                minLines: 1,
-                textInputAction: TextInputAction.newline,
-                decoration: InputDecoration(
-                  hintText: 'Type a message...',
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 10,
+      padding: EdgeInsets.fromLTRB(
+        12,
+        8,
+        12,
+        MediaQuery.of(context).padding.bottom + 8,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // pending attachments preview
+          if (_pendingAttachments.isNotEmpty)
+            AttachmentPickerSection(
+              attachments: _pendingAttachments,
+              onAdded: (a) => setState(() => _pendingAttachments.add(a)),
+              onRemoved: (i) => setState(() => _pendingAttachments.removeAt(i)),
+            ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              // attachment picker trigger
+              _AttachmentTrigger(
+                onImagePicked: (file) => setState(
+                  () => _pendingAttachments.add(
+                    PendingAttachment(file: file, type: 'image'),
                   ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(24),
-                    borderSide: const BorderSide(color: AppColors.divider),
+                ),
+                onFilePicked: (file) => setState(
+                  () => _pendingAttachments.add(
+                    PendingAttachment(file: file, type: 'file'),
                   ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(24),
-                    borderSide: const BorderSide(color: AppColors.divider),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(24),
-                    borderSide: const BorderSide(color: AppColors.primary),
-                  ),
-                  filled: true,
-                  fillColor: AppColors.surface,
                 ),
               ),
-            ),
-            const SizedBox(width: 8),
-            GestureDetector(
-              onTap: _sendText,
-              child: Container(
-                width: 44,
-                height: 44,
-                decoration: const BoxDecoration(
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextField(
+                  controller: _textCtrl,
+                  maxLines: 4,
+                  minLines: 1,
+                  textInputAction: TextInputAction.newline,
+                  decoration: InputDecoration(
+                    hintText: 'Type a message...',
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(24),
+                      borderSide: const BorderSide(color: AppColors.divider),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(24),
+                      borderSide: const BorderSide(color: AppColors.divider),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(24),
+                      borderSide: const BorderSide(color: AppColors.primary),
+                    ),
+                    filled: true,
+                    fillColor: AppColors.surface,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: _send,
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: const BoxDecoration(
+                    color: AppColors.primary,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.send_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// small attachment trigger button beside input
+class _AttachmentTrigger extends StatelessWidget {
+  final void Function(File) onImagePicked;
+  final void Function(File) onFilePicked;
+
+  const _AttachmentTrigger({
+    required this.onImagePicked,
+    required this.onFilePicked,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => _showOptions(context),
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: const BoxDecoration(
+          color: AppColors.primaryFaint,
+          shape: BoxShape.circle,
+        ),
+        child: const Icon(
+          Icons.attach_file_rounded,
+          color: AppColors.primary,
+          size: 20,
+        ),
+      ),
+    );
+  }
+
+  void _showOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(
+                  Icons.image_outlined,
                   color: AppColors.primary,
-                  shape: BoxShape.circle,
                 ),
-                child: const Icon(
-                  Icons.send_rounded,
-                  color: Colors.white,
-                  size: 20,
-                ),
+                title: const Text('Image'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final file = await pickImageFile();
+                  if (file != null) onImagePicked(file);
+                },
               ),
-            ),
-          ],
+              ListTile(
+                leading: const Icon(
+                  Icons.attach_file_rounded,
+                  color: AppColors.secondary,
+                ),
+                title: const Text('File (PDF, DOCX, TXT, ZIP)'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final file = await pickDocFile();
+                  if (file != null) onFilePicked(file);
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-//  Message Bubble
+// Message Bubble — updated with attachment support
 class _MessageBubble extends StatelessWidget {
   final Message message;
   final bool isMe;
@@ -282,46 +418,77 @@ class _MessageBubble extends StatelessWidget {
                 ),
               ),
             ),
-          Row(
-            mainAxisAlignment: isMe
-                ? MainAxisAlignment.end
-                : MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              if (!isMe) const SizedBox(width: 4),
-              Flexible(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 10,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isMe ? AppColors.primary : AppColors.card,
-                    borderRadius: BorderRadius.only(
-                      topLeft: const Radius.circular(16),
-                      topRight: const Radius.circular(16),
-                      bottomLeft: Radius.circular(isMe ? 16 : 4),
-                      bottomRight: Radius.circular(isMe ? 4 : 16),
+
+          //  Attachments outside bubble
+          if (message.attachments.isNotEmpty)
+            Padding(
+              padding: EdgeInsets.only(
+                left: isMe ? 48 : 4,
+                right: isMe ? 4 : 48,
+                bottom: message.text.isNotEmpty ? 4 : 0,
+              ),
+              child: ChatAttachmentViewSection(
+                attachments: message.attachments,
+              ),
+            ),
+
+          //  Text bubble (only if text exists)
+          if (message.text.isNotEmpty)
+            Row(
+              mainAxisAlignment: isMe
+                  ? MainAxisAlignment.end
+                  : MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (!isMe) const SizedBox(width: 4),
+                Flexible(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
                     ),
-                    border: isMe ? null : Border.all(color: AppColors.divider),
-                  ),
-                  child: Text(
-                    message.text,
-                    style: TextStyle(
-                      color: isMe ? Colors.white : AppColors.textPrimary,
-                      fontSize: 14,
-                      height: 1.4,
+                    decoration: BoxDecoration(
+                      color: isMe ? AppColors.primary : AppColors.card,
+                      borderRadius: BorderRadius.only(
+                        topLeft: const Radius.circular(16),
+                        topRight: const Radius.circular(16),
+                        bottomLeft: Radius.circular(isMe ? 16 : 4),
+                        bottomRight: Radius.circular(isMe ? 4 : 16),
+                      ),
+                      border: isMe
+                          ? null
+                          : Border.all(color: AppColors.divider),
+                    ),
+                    child: Text(
+                      message.text,
+                      style: TextStyle(
+                        color: isMe ? Colors.white : AppColors.textPrimary,
+                        fontSize: 14,
+                        height: 1.4,
+                      ),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 4),
-              Text(
+                const SizedBox(width: 4),
+                Text(
+                  _formatTime(message.sentAt),
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: AppColors.textHint,
+                  ),
+                ),
+              ],
+            ),
+
+          //  Time (only attachment, no text)
+          if (message.text.isEmpty && message.attachments.isNotEmpty)
+            Padding(
+              padding: EdgeInsets.only(right: isMe ? 4 : 0, left: isMe ? 0 : 4),
+              child: Text(
                 _formatTime(message.sentAt),
                 style: const TextStyle(fontSize: 10, color: AppColors.textHint),
               ),
-            ],
-          ),
+            ),
         ],
       ),
     );

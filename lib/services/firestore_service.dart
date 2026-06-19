@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/models.dart';
 import '../utils/constants.dart';
-import 'hive_service.dart';
+import 'notification_service.dart';
 
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -147,14 +147,26 @@ class FirestoreService {
     }
 
     // Create link
+    final teacherUserDoc = await _db
+        .collection(AppConstants.usersCol)
+        .doc(teacher.uid)
+        .get();
+    final teacherAvatarUrl = teacherUserDoc.data()?['avatarUrl'] ?? '';
+    final childUserDoc = await _db
+        .collection(AppConstants.usersCol)
+        .doc(child.uid)
+        .get();
+    final childAvatarUrl = childUserDoc.data()?['avatarUrl'] ?? '';
     final linkRef = _db.collection(AppConstants.linksCol).doc();
     await linkRef.set(
       TeacherChildLink(
         id: linkRef.id,
         teacherId: teacher.uid,
         teacherName: teacher.name,
+        teacherAvatarUrl: teacherAvatarUrl,
         childId: child.uid,
         childName: child.name,
+        childAvatarUrl: childAvatarUrl,
         subject: subject,
         createdAt: DateTime.now(),
       ).toMap(),
@@ -164,6 +176,7 @@ class FirestoreService {
     await _db.collection(AppConstants.childrenCol).doc(child.uid).set({
       'name': child.name,
       'avatarUrl': child.avatarUrl,
+      'secondAvatarUrl': child.secondAvatarUrl,
       'parentIds': FieldValue.arrayUnion([parentId]),
       'teacherIds': FieldValue.arrayUnion([teacher.uid]),
       'createdAt': Timestamp.fromDate(DateTime.now()),
@@ -193,6 +206,7 @@ class FirestoreService {
           id: chatRef.id,
           name: '$subject Group - ${teacher.name}',
           teacherId: teacher.uid,
+          teacherAvatarUrl: teacherAvatarUrl,
           childId: child.uid,
           memberIds: memberIds,
           subject: subject,
@@ -348,6 +362,14 @@ class FirestoreService {
           'memberIds': FieldValue.arrayUnion(newMembers),
         });
       }
+
+      final existingAvatarUrl =
+          existing.docs.first.data()['teacherAvatarUrl'] ?? '';
+      if (existingAvatarUrl.isEmpty && link.teacherAvatarUrl.isNotEmpty) {
+        await existing.docs.first.reference.update({
+          'teacherAvatarUrl': link.teacherAvatarUrl,
+        });
+      }
       return;
     }
 
@@ -369,6 +391,7 @@ class FirestoreService {
         id: chatRef.id,
         name: '${link.subject} Group - ${link.teacherName}',
         teacherId: link.teacherId,
+        teacherAvatarUrl: link.teacherAvatarUrl,
         childId: link.childId,
         memberIds: memberIds,
         subject: link.subject,
@@ -391,15 +414,24 @@ class FirestoreService {
       'senderName': message.senderName,
       'text': message.text,
       'sentAt': Timestamp.fromDate(message.sentAt),
+      'attachments': message.attachments.map((a) => a.toMap()).toList(),
     });
 
-    await _db
-        .collection(AppConstants.groupChatsCol)
-        .doc(message.chatId)
-        .update({
-          'lastMessage': message.text,
-          'lastMessageAt': Timestamp.fromDate(message.sentAt),
-        });
+    // lastMessage preview: if text empty and has attachments, show placeholder
+    final preview = message.text.isNotEmpty
+        ? message.text
+        : message.attachments.isNotEmpty
+        ? (message.attachments.first.isImage
+              ? '📷 Image'
+              : '📎 ${message.attachments.first.filename}')
+        : '';
+
+    await _db.collection(AppConstants.groupChatsCol).doc(message.chatId).update(
+      {
+        'lastMessage': preview,
+        'lastMessageAt': Timestamp.fromDate(message.sentAt),
+      },
+    );
   }
 
   Stream<List<Message>> messagesStream(String chatId) {
@@ -414,7 +446,6 @@ class FirestoreService {
         );
   }
 
-  //  Assignments
   Future<Assignment> createAssignment({
     required String teacherId,
     required String teacherName,
@@ -424,6 +455,7 @@ class FirestoreService {
     required String title,
     required String instructions,
     required DateTime dueDate,
+    List<AssignmentAttachment> attachments = const [],
   }) async {
     final ref = _db.collection(AppConstants.assignmentsCol).doc();
     final assignment = Assignment(
@@ -438,8 +470,34 @@ class FirestoreService {
       dueDate: dueDate,
       status: AssignmentStatus.pending,
       createdAt: DateTime.now(),
+      attachments: attachments,
     );
     await ref.set(assignment.toMap());
+
+    await NotificationService.sendAssignmentNotificationToChild(
+      childUid: childId,
+      teacherName: teacherName,
+      subject: subject,
+      assignmentTitle: title,
+      assignmentId: ref.id,
+    );
+
+    final childDoc = await _db
+        .collection(AppConstants.childrenCol)
+        .doc(childId)
+        .get();
+    final parentIds = List<String>.from(childDoc.data()?['parentIds'] ?? []);
+    if (parentIds.isNotEmpty) {
+      await NotificationService.sendAssignmentNotificationToParents(
+        parentUids: parentIds,
+        childName: childName,
+        teacherName: teacherName,
+        subject: subject,
+        assignmentTitle: title,
+        assignmentId: ref.id,
+      );
+    }
+
     return assignment;
   }
 
@@ -467,17 +525,6 @@ class FirestoreService {
               .map((d) => Assignment.fromMap(d.data(), d.id))
               .toList();
           list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-          HiveService.cacheAssignments(
-            list
-                .map(
-                  (a) => {
-                    'id': a.id,
-                    'title': a.title,
-                    'status': a.statusString,
-                  },
-                )
-                .toList(),
-          );
           return list;
         });
   }
@@ -502,6 +549,7 @@ class FirestoreService {
     required String assignmentId,
     required String childId,
     String? comment,
+    List<AssignmentAttachment> attachments = const [],
   }) async {
     final ref = _db.collection(AppConstants.submissionsCol).doc();
     final submission = Submission(
@@ -510,6 +558,7 @@ class FirestoreService {
       childId: childId,
       comment: comment,
       submittedAt: DateTime.now(),
+      attachments: attachments,
     );
     await ref.set(submission.toMap());
 
@@ -571,6 +620,7 @@ class FirestoreService {
     required int participation,
     required int improvement,
     String? notes,
+    required String teacherSubject,
   }) async {
     final q = await _db
         .collection(AppConstants.progressCol)
@@ -591,6 +641,7 @@ class FirestoreService {
       'improvement': improvement,
       'notes': notes,
       'updatedAt': Timestamp.fromDate(DateTime.now()),
+      'teacherSubject': teacherSubject,
     };
 
     DocumentReference ref;
@@ -649,5 +700,48 @@ class FirestoreService {
       if (user != null) result[uid] = user;
     }
     return result;
+  }
+
+  Future<void> updateUserAvatar({
+    required String uid,
+    required String avatarUrl,
+    String? secondAvatarUrl,
+    int? avatarColor,
+    required UserRole role,
+  }) async {
+    final data = <String, dynamic>{'avatarUrl': avatarUrl};
+    if (secondAvatarUrl != null) data['secondAvatarUrl'] = secondAvatarUrl;
+    if (avatarColor != null) data['avatarColor'] = avatarColor;
+    await _db.collection(AppConstants.usersCol).doc(uid).update(data);
+
+    if (role == UserRole.teacher) {
+      final links = await _db
+          .collection(AppConstants.linksCol)
+          .where('teacherId', isEqualTo: uid)
+          .get();
+      for (final doc in links.docs) {
+        await doc.reference.update({'teacherAvatarUrl': avatarUrl});
+      }
+      final chats = await _db
+          .collection(AppConstants.groupChatsCol)
+          .where('teacherId', isEqualTo: uid)
+          .get();
+      for (final doc in chats.docs) {
+        await doc.reference.update({'teacherAvatarUrl': avatarUrl});
+      }
+    } else if (role == UserRole.child) {
+      final links = await _db
+          .collection(AppConstants.linksCol)
+          .where('childId', isEqualTo: uid)
+          .get();
+      for (final doc in links.docs) {
+        await doc.reference.update({'childAvatarUrl': avatarUrl});
+      }
+      await _db.collection(AppConstants.childrenCol).doc(uid).set({
+        'avatarUrl': avatarUrl,
+        if (avatarColor != null) 'avatarColor': avatarColor,
+        if (secondAvatarUrl != null) 'secondAvatarUrl': secondAvatarUrl,
+      }, SetOptions(merge: true));
+    }
   }
 }

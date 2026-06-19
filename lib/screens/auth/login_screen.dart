@@ -227,6 +227,7 @@ class _LoginScreenState extends State<LoginScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: AppColors.card,
+      showDragHandle: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -273,6 +274,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: const Text('Send Reset Link'),
               ),
             ),
+            const SizedBox(height: 25),
           ],
         ),
       ),

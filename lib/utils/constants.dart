@@ -3,17 +3,6 @@ import 'package:flutter/material.dart';
 class AppConstants {
   static const String appName = 'TutorLink';
 
-  // Hive boxes
-  static const String userBox = 'user_box';
-  static const String chatsBox = 'chats_box';
-  static const String assignmentsBox = 'assignments_box';
-  static const String notificationsBox = 'notifications_box';
-
-  // Hive keys
-  static const String currentUserKey = 'current_user';
-  static const String cachedChatsKey = 'cached_chats';
-  static const String cachedAssignmentsKey = 'cached_assignments';
-
   // Firestore collections
   static const String usersCol = 'users';
   static const String childrenCol = 'children';

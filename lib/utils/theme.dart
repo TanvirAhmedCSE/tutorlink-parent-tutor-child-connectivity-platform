@@ -2,18 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppColors {
-  // Warm, earthy, human color palette
   static const Color primary = Color(0xFF2D6A4F); // Forest green
   static const Color primaryLight = Color(0xFF52B788); // Soft green
   static const Color primaryFaint = Color(0xFFD8F3DC); // Very light green bg
 
-  static const Color secondary = Color(0xFFE76F51); // Warm terracotta
-  static const Color secondaryFaint = Color(0xFFFDE8E2); // Light terracotta bg
+  static const Color secondary = Color(0xFFE76F51);
+  static const Color secondaryFaint = Color(0xFFFDE8E2);
 
-  static const Color accent = Color(0xFFE9C46A); // Golden yellow
-  static const Color accentFaint = Color(0xFFFFF8E6); // Light gold bg
+  static const Color accent = Color(0xFFE9C46A);
+  static const Color accentFaint = Color(0xFFFFF8E6);
 
-  static const Color surface = Color(0xFFFAF9F7); // Warm white
+  static const Color surface = Color(0xFFFAF9F7);
   static const Color card = Color(0xFFFFFFFF);
   static const Color divider = Color(0xFFEEEBE6);
 
@@ -27,9 +26,9 @@ class AppColors {
   static const Color info = Color(0xFF457B9D);
 
   // Role colors
-  static const Color parentColor = Color(0xFF457B9D); // Calm blue
-  static const Color teacherColor = Color(0xFF2D6A4F); // Forest green
-  static const Color childColor = Color(0xFFE76F51); // Warm orange
+  static const Color parentColor = Color(0xFF457B9D);
+  static const Color teacherColor = Color(0xFF2D6A4F);
+  static const Color childColor = Color(0xFFE76F51);
 }
 
 class AppTheme {
