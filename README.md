@@ -103,14 +103,14 @@ A polished Flutter app that bridges the gap between **Parents**, **Tutors**, and
 ### Log In & Sign Up
 <table>
   <tr>
-    <td align="center"><img src="app screenshots/login_signup/1.jpg" width="220"/></td>
-    <td align="center"><img src="app screenshots/login_signup/2.jpg" width="220"/></td>
-    <td align="center"><img src="app screenshots/login_signup/3.jpg" width="220"/></td>
+    <td align="center"><img src="app screenshots/log in sign up/1.jpg" width="220"/></td>
+    <td align="center"><img src="app screenshots/log in sign up/2.jpg" width="220"/></td>
+    <td align="center"><img src="app screenshots/log in sign up/3.jpg" width="220"/></td>
   </tr>
   <tr>
-    <td align="center"><img src="app screenshots/login_signup/4.jpg" width="220"/></td>
-    <td align="center"><img src="app screenshots/login_signup/5.jpg" width="220"/></td>
-    <td align="center"><img src="app screenshots/login_signup/6.jpg" width="220"/></td>
+    <td align="center"><img src="app screenshots/log in sign up/4.jpg" width="220"/></td>
+    <td align="center"><img src="app screenshots/log in sign up/5.jpg" width="220"/></td>
+    <td align="center"><img src="app screenshots/log in sign up/6.jpg" width="220"/></td>
   </tr>
 </table>
 
