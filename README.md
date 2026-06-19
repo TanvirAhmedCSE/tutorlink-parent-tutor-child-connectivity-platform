@@ -7,7 +7,6 @@
 <img src="https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=black" />
 <img src="https://img.shields.io/badge/Cloudinary-3448C5?style=for-the-badge&logo=cloudinary&logoColor=white" />
 <img src="https://img.shields.io/badge/OneSignal-E54A4A?style=for-the-badge&logo=onesignal&logoColor=white" />
-<img src="https://img.shields.io/badge/Hive-FFB300?style=for-the-badge&logo=hive&logoColor=white" />
 
 <br/><br/>
 
@@ -212,7 +211,6 @@ A polished Flutter app that bridges the gap between **Parents**, **Tutors**, and
 | Framework | Flutter (Dart) |
 | Auth | Firebase Authentication |
 | Database | Cloud Firestore |
-| Local Storage | Hive (hive_flutter) |
 | File / Media Storage | Cloudinary (unsigned uploads, image + raw endpoints) |
 | Push Notifications | OneSignal (+ Firebase Messaging for platform delivery) |
 | UI | Google Fonts (Nunito), percent_indicator, fl_chart, cached_network_image |
@@ -237,7 +235,6 @@ lib/
 │   ├── auth_service.dart            # Register, login, verify, logout, reset
 │   │                                #   + OneSignal login/logout binding
 │   ├── firestore_service.dart       # All Firestore reads/writes/streams
-│   ├── hive_service.dart            # Local cache: user, assignments, chats
 │   ├── cloudinary_service.dart      # Image/file upload to Cloudinary
 │   └── notification_service.dart   # OneSignal init + assignment push helpers
 ├── utils/
@@ -426,10 +423,6 @@ firebase_messaging: ^15.1.3
 
 # Push notifications
 onesignal_flutter: ^5.6.0
-
-# Local storage
-hive: ^2.2.3
-hive_flutter: ^1.1.0
 
 # UI
 google_fonts: ^6.2.1
